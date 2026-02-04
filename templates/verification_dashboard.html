@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guest Verification Dashboard - HotelEase</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='manager_dashboard.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .dashboard-container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        .dashboard-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2); }
+        .dashboard-header h1 { font-size: 2.2rem; margin-bottom: 0.5rem; font-weight: 700; }
+        .dashboard-header p { font-size: 1.1rem; opacity: 0.9; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+        .stat-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); border-left: 4px solid #667eea; }
+        .stat-card h3 { color: #4a5568; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-number { font-size: 2rem; font-weight: 700; color: #2d3748; }
+        .stat-change { font-size: 0.8rem; color: #10b981; margin-top: 0.25rem; }
+        .main-grid { display: grid; grid-template-columns: 1fr 350px; gap: 2rem; }
+        .verification-panel { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); overflow: hidden; }
+        .panel-header { background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%); padding: 1.5rem; border-bottom: 1px solid #e2e8f0; }
+        .panel-header h2 { color: #2d3748; font-size: 1.3rem; font-weight: 600; margin: 0; }
+        .verification-table { width: 100%; border-collapse: collapse; }
+        .verification-table th { background: #f8fafc; color: #4a5568; padding: 1rem 1.5rem; text-align: left; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .verification-table td { padding: 1rem 1.5rem; border-bottom: 1px solid #f1f5f9; }
+        .verification-table tbody tr:hover { background: #f8fafc; }
+        .status-badge { padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        .qr-panel { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .qr-content { padding: 2rem; text-align: center; }
+        .qr-title { color: #2d3748; font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; }
+        .qr-subtitle { color: #718096; font-size: 0.9rem; margin-bottom: 1.5rem; }
+        .qr-code { max-width: 200px; border: 3px solid #e2e8f0; border-radius: 12px; margin: 1rem 0; }
+        .url-box { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin: 1.5rem 0; word-break: break-all; font-size: 0.8rem; text-align: left; }
+        .url-box strong { color: #4a5568; }
+        .url-box a { color: #667eea; text-decoration: none; }
+        .url-box a:hover { text-decoration: underline; }
+        .download-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.3s ease; }
+        .download-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3); }
+        .action-buttons { display: flex; gap: 0.5rem; }
+        .btn-approve { background: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s ease; }
+        .btn-reject { background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 500; transition: all 0.2s ease; }
+        .btn-approve:hover { background: #059669; transform: translateY(-1px); }
+        .btn-reject:hover { background: #dc2626; transform: translateY(-1px); }
+        .empty-state { text-align: center; padding: 4rem 2rem; color: #718096; }
+        .empty-state i { font-size: 4rem; margin-bottom: 1rem; opacity: 0.3; }
+        .empty-state h3 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+        .back-btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 0.7rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease; }
+        .back-btn:hover { background: rgba(255,255,255,0.3); transform: translateY(-1px); }
+        @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } .qr-panel { order: -1; } }
+        @media (max-width: 768px) { .dashboard-container { padding: 1rem; } .stats-grid { grid-template-columns: 1fr; } .verification-table th, .verification-table td { padding: 0.75rem; font-size: 0.8rem; } }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header Section -->
+        <div class="dashboard-header">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1><i class="fas fa-shield-check"></i> Guest Verification Center</h1>
+                    <p>Manage and monitor guest verification requests with ease</p>
+                </div>
+                <a href="/hotel-manager/dashboard?id={{ manager_id }}&name=Manager" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Requests</h3>
+                <div class="stat-number">{{ verifications|length }}</div>
+                <div class="stat-change">All time</div>
+            </div>
+            <div class="stat-card">
+                <h3>Pending Review</h3>
+                <div class="stat-number">{{ verifications|selectattr('7', 'equalto', 'pending')|list|length }}</div>
+                <div class="stat-change">Awaiting action</div>
+            </div>
+            <div class="stat-card">
+                <h3>Approved</h3>
+                <div class="stat-number">{{ verifications|selectattr('7', 'equalto', 'approved')|list|length }}</div>
+                <div class="stat-change">Verified guests</div>
+            </div>
+            <div class="stat-card">
+                <h3>Rejected</h3>
+                <div class="stat-number">{{ verifications|selectattr('7', 'equalto', 'rejected')|list|length }}</div>
+                <div class="stat-change">Declined requests</div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="main-grid">
+            <!-- Verification Requests Panel -->
+            <div class="verification-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-list-check"></i> Verification Requests</h2>
+                </div>
+                {% if verifications %}
+                <table class="verification-table">
+                    <thead>
+                        <tr>
+                            <th>Guest Name</th>
+                            <th>Phone Number</th>
+                            <th>Submitted</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for verification in verifications %}
+                        <tr>
+                            <td>
+                                <div style="font-weight: 600; color: #2d3748;">{{ verification[1] }}</div>
+                                <div style="font-size: 0.8rem; color: #718096;">ID: {{ verification[4] }}</div>
+                            </td>
+                            <td>{{ verification[2] }}</td>
+                            <td>
+                                <div>{{ verification[6].strftime('%b %d, %Y') }}</div>
+                                <div style="font-size: 0.8rem; color: #718096;">{{ verification[6].strftime('%I:%M %p') }}</div>
+                            </td>
+                            <td>
+                                <span class="status-badge status-{{ verification[7] }}">
+                                    {{ verification[7] }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if verification[7] == 'pending' %}
+                                <div class="action-buttons">
+                                    <button class="btn-approve" onclick="updateStatus({{ verification[0] }}, 'approved')">
+                                        <i class="fas fa-check"></i> Approve
+                                    </button>
+                                    <button class="btn-reject" onclick="updateStatus({{ verification[0] }}, 'rejected')">
+                                        <i class="fas fa-times"></i> Reject
+                                    </button>
+                                </div>
+                                {% else %}
+                                <span style="color: #718096; font-size: 0.8rem;">No action needed</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <h3>No Verification Requests</h3>
+                    <p>Share the QR code with guests to start receiving verification requests</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- QR Code Panel -->
+            <div class="qr-panel">
+                <div class="panel-header">
+                    <h2><i class="fas fa-qrcode"></i> Guest Access</h2>
+                </div>
+                <div class="qr-content">
+                    <h3 class="qr-title">Verification QR Code</h3>
+                    <p class="qr-subtitle">Guests can scan this code to submit verification requests</p>
+                    
+                    <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="qr-code">
+                    
+                    <div class="url-box">
+                        <strong>Public Form URL:</strong><br>
+                        <a href="{{ public_url }}" target="_blank">{{ public_url }}</a>
+                    </div>
+                    
+                    <a href="{{ url_for('guest_verification.download_qr', manager_id=manager_id) }}" class="download-btn">
+                        <i class="fas fa-download"></i> Download QR Code
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateStatus(verificationId, status) {
+            if (confirm(`Are you sure you want to ${status} this verification request?`)) {
+                fetch('/guest-verification/update-status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        verification_id: verificationId,
+                        status: status
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error updating status. Please try again.');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

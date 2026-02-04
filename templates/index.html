@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HotelEase - Professional Hotel Management</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">🏨 HotelEase</div>
+            <ul class="nav-menu">
+                <li><a href="#" class="nav-link">Home</a></li>
+                <li><a href="#" class="nav-link">Rooms</a></li>
+                <li><a href="#" class="nav-link">Services</a></li>
+                <li><a href="#" class="nav-link">Contact</a></li>
+                <li class="dropdown">
+                    <button class="login-btn" onclick="toggleDropdown()">Login ▼</button>
+                    <div class="dropdown-menu" id="loginDropdown">
+                        <a href="{{ url_for('admin.login') }}">👤 Admin Login</a>
+                        <a href="{{ url_for('hotel_manager.login_page') }}">🏨 Manager Login</a>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">Welcome to HotelEase</h1>
+            <p class="hero-subtitle">Professional hotel management made simple and efficient</p>
+            <div class="hero-buttons">
+                <button class="cta-btn primary" onclick="scrollToFeatures()">Explore Features</button>
+                <button class="cta-btn secondary" onclick="showLoginOptions()">Get Started</button>
+            </div>
+        </div>
+        <div class="hero-decoration"></div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="features" id="features">
+        <div class="features-container">
+            <h2 class="section-title">Why Choose HotelEase?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon admin">⚡</div>
+                    <h3>Admin Control</h3>
+                    <p>Complete oversight with powerful administrative tools for managing hotels and staff efficiently.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon manager">🎯</div>
+                    <h3>Manager Access</h3>
+                    <p>Streamlined daily operations with intuitive dashboards for seamless hotel management.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon guest">✨</div>
+                    <h3>Guest Experience</h3>
+                    <p>Enhanced guest satisfaction through efficient service delivery and modern amenities.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2026 HotelEase - Professional Hotel Management System</p>
+        </div>
+    </footer>
+
+    <script>
+        function toggleDropdown() {
+            document.getElementById('loginDropdown').classList.toggle('show');
+        }
+
+        function scrollToFeatures() {
+            document.getElementById('features').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showLoginOptions() {
+            toggleDropdown();
+        }
+
+        // Close dropdown when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.matches('.login-btn')) {
+                var dropdown = document.getElementById('loginDropdown');
+                if (dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                }
+            }
+        }
+    </script>
+
+</body>
+</html>

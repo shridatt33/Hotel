@@ -1,0 +1,1887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Dashboard - HotelEase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='manager.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='menu_dashboard.css') }}">
+</head>
+<body>
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-message {{ category }}">
+                    <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}"></i>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fas fa-hotel"></i>
+            <span>HotelEase</span>
+        </div>
+        <nav class="sidebar-menu">
+            <div class="menu-label">Main Menu</div>
+            <a href="#" class="menu-item active" onclick="showSection('dashboard')">
+                <i class="fas fa-chart-pie"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="menu-item" onclick="showSection('waiters')">
+                <i class="fas fa-user-tie"></i>
+                <span>Waiters</span>
+            </a>
+            {% if food_enabled %}
+            <div class="menu-divider"></div>
+            <div class="menu-label">Food & Orders</div>
+            <a href="#" class="menu-item" onclick="showSection('table-orders')">
+                <i class="fas fa-qrcode"></i>
+                <span>Table Orders</span>
+            </a>
+            <a href="#" class="menu-item" onclick="showSection('menu')">
+                <i class="fas fa-utensils"></i>
+                <span>Menu Management</span>
+            </a>
+            <a href="#" class="menu-item" onclick="showSection('full-menu')">
+                <i class="fas fa-book-open"></i>
+                <span>Full Menu View</span>
+            </a>
+            {% endif %}
+            {% if kyc_enabled %}
+            <div class="menu-divider"></div>
+            <div class="menu-label">Guests</div>
+            <a href="#" class="menu-item" onclick="showSection('verification')">
+                <i class="fas fa-id-card"></i>
+                <span>Verification</span>
+            </a>
+            {% endif %}
+            <div class="menu-divider"></div>
+            <div class="menu-label">System</div>
+            <a href="#" class="menu-item" onclick="showSection('reports')">
+                <i class="fas fa-chart-line"></i>
+                <span>Reports</span>
+            </a>
+            <a href="#" class="menu-item" onclick="showSection('settings')">
+                <i class="fas fa-sliders-h"></i>
+                <span>Settings</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <button class="mobile-menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1>Manager Dashboard</h1>
+        </div>
+        <div class="header-right">
+            <div class="header-icon">
+                <i class="fas fa-bell"></i>
+                <span class="badge">3</span>
+            </div>
+            <div class="header-icon">
+                <i class="fas fa-envelope"></i>
+            </div>
+            <div class="profile-dropdown">
+                <div class="profile-btn" onclick="toggleDropdown()">
+                    <div class="profile-avatar">
+                        {{ manager_name[:1]|upper if manager_name else 'M' }}
+                    </div>
+                    <div class="profile-info">
+                        <div class="profile-name">{{ manager_name }}</div>
+                        <div class="profile-role">Hotel Manager</div>
+                    </div>
+                    <i class="fas fa-chevron-down" style="color: var(--gray); font-size: 0.8rem;"></i>
+                </div>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a href="#" onclick="showSection('settings')"><i class="fas fa-user"></i> Profile Settings</a>
+                    <a href="#" onclick="showSection('settings')"><i class="fas fa-cog"></i> Account Settings</a>
+                    <a href="/" class="danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Section -->
+        <div id="dashboard" class="content-section active">
+            <div class="page-header">
+                <h1>👋 Welcome back, {{ manager_name }}!</h1>
+                <p>Here's what's happening with your hotel today.</p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon green">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div class="stat-change up">
+                            <i class="fas fa-arrow-up"></i> 12%
+                        </div>
+                    </div>
+                    <div class="stat-value">24</div>
+                    <div class="stat-label">Today's Verification</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon purple">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <div class="stat-change up">
+                            <i class="fas fa-arrow-up"></i> 8%
+                        </div>
+                    </div>
+                    <div class="stat-value">156</div>
+                    <div class="stat-label">Today's Orders</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon blue">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ waiters_count if waiters_count else 0 }}</div>
+                    <div class="stat-label">Active Waiters</div>
+                    <div class="stat-subtitle">On duty today</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon orange">
+                            <i class="fas fa-hamburger"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">89</div>
+                    <div class="stat-label">Menu Items</div>
+                    <div class="stat-subtitle">Available today</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon pink">
+                            <i class="fas fa-indian-rupee-sign"></i>
+                        </div>
+                        <div class="stat-change up">
+                            <i class="fas fa-arrow-up"></i> 15%
+                        </div>
+                    </div>
+                    <div class="stat-value">₹24,500</div>
+                    <div class="stat-label">Today's Revenue</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon cyan">
+                            <i class="fas fa-chair"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">12</div>
+                    <div class="stat-label">Active Tables</div>
+                    <div class="stat-subtitle">Currently occupied</div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-clock"></i> Recent Activity</h3>
+                    <a href="#" style="color: var(--primary); text-decoration: none; font-size: 0.9rem;">View All</a>
+                </div>
+                <div class="card-body">
+                    <ul class="activity-list">
+                        <li class="activity-item">
+                            <div class="activity-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
+                                <i class="fas fa-bell"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p><strong>New order received</strong> - Table 12 placed an order for ₹1,250</p>
+                                <span class="activity-time">2 minutes ago</span>
+                            </div>
+                        </li>
+                        <li class="activity-item">
+                            <div class="activity-icon" style="background: rgba(79, 70, 229, 0.1); color: var(--primary);">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p><strong>Guest verified</strong> - John Smith completed ID verification</p>
+                                <span class="activity-time">15 minutes ago</span>
+                            </div>
+                        </li>
+                        <li class="activity-item">
+                            <div class="activity-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">
+                                <i class="fas fa-plus"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p><strong>Menu updated</strong> - Added 3 new items to Desserts category</p>
+                                <span class="activity-time">1 hour ago</span>
+                            </div>
+                        </li>
+                        <li class="activity-item">
+                            <div class="activity-icon" style="background: rgba(6, 182, 212, 0.1); color: var(--secondary);">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p><strong>Payment received</strong> - Table 5 cleared bill of ₹3,450</p>
+                                <span class="activity-time">2 hours ago</span>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Waiters Section -->
+        <div id="waiters" class="content-section">
+            <div class="page-header">
+                <h1><i class="fas fa-user-tie"></i> Waiters Management</h1>
+                <p>Add, manage and track your restaurant staff</p>
+            </div>
+            
+            <!-- Add Waiter Form -->
+            <div class="form-card">
+                <h3><i class="fas fa-user-plus"></i> Add New Waiter</h3>
+                <div id="message" class="message"></div>
+                <form onsubmit="handleAddWaiter(event)" class="waiter-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="waiter-name">Waiter Name</label>
+                            <input type="text" id="waiter-name" required placeholder="Enter waiter name">
+                        </div>
+                        <div class="form-group">
+                            <label for="waiter-email">Email</label>
+                            <input type="email" id="waiter-email" required placeholder="Enter email">
+                        </div>
+                        <div class="form-group">
+                            <label for="waiter-phone">Phone Number</label>
+                            <input type="tel" id="waiter-phone" required placeholder="Enter phone number">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Add Waiter</button>
+                </form>
+            </div>
+
+            <!-- Waiters List -->
+            <div class="table-card">
+                <h3><i class="fas fa-list"></i> Waiters List</h3>
+                <div class="waiters-list">
+                    {{ waiters_html|safe }}
+                    </div>
+                </div>
+            </div>
+
+            {% if food_enabled %}
+            <div id="table-orders" class="content-section">
+                <div class="page-header">
+                    <h1><i class="fas fa-qrcode"></i> Table Orders</h1>
+                    <p>Manage QR code-based table ordering system</p>
+                </div>
+                
+                <!-- Sub-navigation -->
+                <div class="sub-nav">
+                    <button class="sub-nav-btn active" onclick="showTableSubSection('manage-tables')">
+                        <i class="fas fa-table-cells"></i> Manage Tables
+                    </button>
+                    <button class="sub-nav-btn" onclick="showTableSubSection('view-orders')">
+                        <i class="fas fa-list-check"></i> View Orders
+                    </button>
+                </div>
+                
+                <!-- Manage Tables Sub-section -->
+                <div id="manage-tables" class="sub-section active">
+                    <div class="form-card">
+                        <h3><i class="fas fa-plus-circle"></i> Add New Table</h3>
+                        <div id="table-message" class="message"></div>
+                        <form onsubmit="handleAddTable(event)" class="table-form">
+                            <div class="form-group">
+                                <label for="table-number">Table Number</label>
+                                <input type="text" id="table-number" required placeholder="Enter table number (e.g., 1, A1, VIP-1)">
+                            </div>
+                            <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Add Table</button>
+                        </form>
+                    </div>
+                    
+                    <!-- Tables List -->
+                    <div class="table-card">
+                        <h3><i class="fas fa-chair"></i> All Tables</h3>
+                        <div id="tables-list">
+                            <div class="empty-state">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Loading tables...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- View Orders Sub-section -->
+                <div id="view-orders" class="sub-section">
+                    <div class="table-card">
+                        <h3><i class="fas fa-receipt"></i> Table Orders</h3>
+                        <div id="orders-list">
+                            <div class="empty-state">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Loading orders...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if food_enabled %}
+            <div id="menu" class="content-section">
+                <!-- Menu Dashboard Content -->
+                <div class="menu-container">
+                    <div class="menu-header-main">
+                        <h1><i class="fas fa-utensils"></i> Menu Management</h1>
+                        <div class="alert" id="menu-alert" style="display: none;"></div>
+                    </div>
+
+                    <div class="menu-tabs" id="menu-tabs">
+                        <button class="tab active" data-category="1" onclick="showMenuCategory(1, this)">Starters</button>
+                        <button class="tab" data-category="2" onclick="showMenuCategory(2, this)">Main Course</button>
+                        <button class="tab" data-category="3" onclick="showMenuCategory(3, this)">Desserts</button>
+                        <button class="tab add-tab" onclick="showAddCategoryModal()">+ Add Category</button>
+                    </div>
+
+                    <div class="menu-content">
+                        <div class="menu-header">
+                            <h3 id="category-title">Starters</h3>
+                            <div style="display: flex; gap: 1rem; align-items: center;">
+                                <div class="category-actions" id="category-actions" style="display: none;">
+                                    <button class="btn-action btn-edit" onclick="editCategory()" title="Edit Category">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn-action btn-delete" onclick="deleteCategory()" title="Delete Category">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <button class="btn-primary" id="add-dish-btn" onclick="showAddDishModal()">+ Add Dish</button>
+                            </div>
+                        </div>
+                        
+                        <div id="dishes-container">
+                            <table class="dishes-table" id="dishes-table">
+                                <thead>
+                                    <tr>
+                                        <th>Image</th>
+                                        <th>Dish Name</th>
+                                        <th>Price</th>
+                                        <th>Quantity</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dishes-tbody">
+                                </tbody>
+                            </table>
+                            <div id="empty-state" class="empty-state" style="display: none;">
+                                <i class="fas fa-utensils"></i>
+                                <p>No dishes in this category yet</p>
+                                <button class="btn-primary" onclick="showAddDishModal()">Add First Dish</button>
+                            </div>
+                            <div id="full-menu-view" class="full-menu-view" style="display: none;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add/Edit Dish Modal -->
+                <div id="dish-modal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="modal-title">Add New Dish</h3>
+                            <button class="modal-close" onclick="closeDishModal()">&times;</button>
+                        </div>
+                        <form id="dish-form" enctype="multipart/form-data">
+                            <input type="hidden" id="dish-id" name="dish_id">
+                            <input type="hidden" id="category-id" name="category_id">
+                            
+                            <div class="form-group">
+                                <label for="dish-name">Dish Name *</label>
+                                <input type="text" id="dish-name" name="name" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="dish-price">Price (₹) *</label>
+                                <input type="number" id="dish-price" name="price" step="0.01" min="0.01" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="dish-quantity">Quantity *</label>
+                                <input type="text" id="dish-quantity" name="quantity" required placeholder="e.g., 100ml, 250gm, 1 plate, 2 pcs">
+                                <small>You can enter text like "100ml", "250gm", "1 plate", "2 pcs", etc.</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="dish-description">Description</label>
+                                <textarea id="dish-description" name="description" rows="3" placeholder="Optional description of the dish"></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="dish-images">Upload Images (Max 3) *</label>
+                                <input type="file" id="dish-images" name="images" multiple accept="image/*">
+                                <div id="image-selection-info" class="image-info"></div>
+                                <small>Hold Ctrl and click to select multiple images. Supported formats: PNG, JPG, JPEG, GIF</small>
+                            </div>
+                            
+                            <div class="modal-actions">
+                                <button type="button" class="btn-secondary" onclick="closeDishModal()">Cancel</button>
+                                <button type="submit" class="btn-primary" id="submit-btn">Add Dish</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Add Category Modal -->
+                <div id="category-modal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 id="category-modal-title">Add New Category</h3>
+                            <button class="modal-close" onclick="closeCategoryModal()">&times;</button>
+                        </div>
+                        <form id="category-form">
+                            <input type="hidden" id="edit-category-id" name="category_id">
+                            <div class="form-group">
+                                <label for="category-name">Category Name *</label>
+                                <input type="text" id="category-name" name="name" required placeholder="e.g., Beverages, Appetizers">
+                            </div>
+                            
+                            <div class="modal-actions">
+                                <button type="button" class="btn-secondary" onclick="closeCategoryModal()">Cancel</button>
+                                <button type="submit" class="btn-primary" id="category-submit-btn">Add Category</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Image Viewer Modal -->
+                <div id="images-modal" class="modal" style="display: none;">
+                    <div class="modal-content images-modal-content">
+                        <div class="modal-header">
+                            <h3 id="images-modal-title">Dish Images</h3>
+                            <button class="modal-close" onclick="closeImagesModal()">&times;</button>
+                        </div>
+                        <div class="images-modal-body">
+                            <div id="dish-details"></div>
+                            <div id="image-slider-container">
+                                <div class="image-slider">
+                                    <div class="slider-nav prev" onclick="prevImage()">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </div>
+                                    <div class="slider-images" id="slider-images">
+                                    </div>
+                                    <div class="slider-nav next" onclick="nextImage()">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </div>
+                                </div>
+                                <div class="slider-dots" id="slider-dots"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if kyc_enabled %}
+            <div id="verification" class="content-section">
+                <div class="page-header">
+                    <h1><i class="fas fa-id-card"></i> Guest Verification Dashboard</h1>
+                    <p>Manage guest verification requests and share QR code for submissions</p>
+                </div>
+
+                <!-- Main Verification Content -->
+                <div style="display: grid; grid-template-columns: 1fr 350px; gap: 2rem;">
+                    <!-- Left Section - Verification Table -->
+                    <div class="table-card">
+                        <h3><i class="fas fa-list-check"></i> Verification Requests</h3>
+                        <div id="verification-content">
+                            <div class="empty-state">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Loading verification requests...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Section - QR Code -->
+                    <div class="form-card" style="text-align: center; height: fit-content;">
+                        <h3><i class="fas fa-qrcode"></i> Guest Access QR</h3>
+                        <p style="color: var(--gray); margin-bottom: 1.5rem; font-size: 0.9rem;">Share this QR code with guests</p>
+                        
+                        <div id="qr-code-container">
+                            <div class="empty-state">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Generating QR Code...</p>
+                            </div>
+                        </div>
+                        
+                        <div id="public-url-container" style="background: var(--bg-light); padding: 1rem; border-radius: 10px; margin: 1.5rem 0; word-break: break-all; font-size: 0.8rem; text-align: left; display: none;">
+                            <strong>Public Form URL:</strong><br>
+                            <a href="#" target="_blank" style="color: var(--primary); text-decoration: none;" id="public-url-link"></a>
+                        </div>
+                        
+                        <button id="download-qr-btn" class="btn-primary" style="display: none;">
+                            <i class="fas fa-download"></i> Download QR Code
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div id="reports" class="content-section">
+                <div class="page-header">
+                    <h1><i class="fas fa-chart-line"></i> Reports & Analytics</h1>
+                    <p>View detailed reports and analytics</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-chart-pie"></i>
+                    <h3>Reports & Analytics</h3>
+                    <p>Advanced analytics and reporting coming soon...</p>
+                </div>
+            </div>
+
+            <div id="settings" class="content-section">
+                <div class="page-header">
+                    <h1><i class="fas fa-sliders-h"></i> Settings</h1>
+                    <p>Manage your account and preferences</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-cog"></i>
+                    <h3>Account Settings</h3>
+                    <p>Configure your preferences and account settings...</p>
+                </div>
+            </div>
+
+            <!-- Additional placeholder sections for scroll testing -->
+            <div id="inventory" class="content-section">
+                <div class="page-header">
+                    <h1>Inventory Management</h1>
+                    <p>Track and manage restaurant inventory</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-boxes"></i>
+                    <h3>Inventory Management</h3>
+                    <p>This section is coming soon...</p>
+                </div>
+            </div>
+
+            <div id="tables" class="content-section">
+                <div class="page-header">
+                    <h1>Table Management</h1>
+                    <p>Manage restaurant tables and seating</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-table"></i>
+                    <h3>Table Management</h3>
+                    <p>This section is coming soon...</p>
+                </div>
+            </div>
+
+            <div id="reservations" class="content-section">
+                <div class="page-header">
+                    <h1>Reservations</h1>
+                    <p>Manage table reservations and bookings</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-calendar-check"></i>
+                    <h3>Reservations</h3>
+                    <p>This section is coming soon...</p>
+                </div>
+            </div>
+
+            <div id="staff-shifts" class="content-section">
+                <div class="page-header">
+                    <h1>Staff Shifts</h1>
+                    <p>Manage staff schedules and shifts</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-clock"></i>
+                    <h3>Staff Shifts</h3>
+                    <p>This section is coming soon...</p>
+                </div>
+            </div>
+
+            <div id="kitchen-status" class="content-section">
+                <div class="page-header">
+                    <h1>Kitchen Status</h1>
+                    <p>Monitor kitchen operations and status</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-fire"></i>
+                    <h3>Kitchen Status</h3>
+                    <p>This section is coming soon...</p>
+                </div>
+            </div>
+
+            <div id="offers" class="content-section">
+                <div class="page-header">
+                    <h1>Offers & Promotions</h1>
+                    <p>Create and manage special offers</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-tags"></i>
+                    <h3>Offers & Promotions</h3>
+                    <p>This section is coming soon...</p>
+                </div>
+            </div>
+
+            <div id="coupons" class="content-section">
+                <div class="page-header">
+                    <h1>Coupons</h1>
+                    <p>Manage discount coupons and codes</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-ticket-alt"></i>
+                    <h3>Coupons</h3>
+                    <p>This section is coming soon...</p>
+                </div>
+            </div>
+
+            <div id="feedback" class="content-section">
+                <div class="page-header">
+                    <h1>Customer Feedback</h1>
+                    <p>View and manage customer reviews</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-comments"></i>
+                    <h3>Customer Feedback</h3>
+                    <p>This section is coming soon...</p>
+                </div>
+            </div>
+
+            <div id="logs" class="content-section">
+                <div class="page-header">
+                    <h1>System Logs</h1>
+                    <p>View system activity and logs</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-file-alt"></i>
+                    <h3>System Logs</h3>
+                    <p>This section is coming soon...</p>
+                </div>
+            </div>
+
+            <div id="audit-trail" class="content-section">
+                <div class="page-header">
+                    <h1>Audit Trail</h1>
+                    <p>Track all system changes and activities</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-search"></i>
+                    <h3>Audit Trail</h3>
+                    <p>This section is coming soon...</p>
+                </div>
+            </div>
+
+            <div id="help" class="content-section">
+                <div class="page-header">
+                    <h1>Help Center</h1>
+                    <p>Get help and documentation</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-question-circle"></i>
+                    <h3>Help Center</h3>
+                    <p>This section is coming soon...</p>
+                </div>
+            </div>
+
+            <div id="support" class="content-section">
+                <div class="page-header">
+                    <h1>Support</h1>
+                    <p>Contact support and get assistance</p>
+                </div>
+                <div class="coming-soon">
+                    <i class="fas fa-headset"></i>
+                    <h3>Support</h3>
+                    <p>This section is coming soon...</p>
+                </div>
+            </div>
+
+            {% if food_enabled %}
+            <div id="full-menu" class="content-section">
+                <div class="page-header">
+                    <h1><i class="fas fa-book-open"></i> Full Menu</h1>
+                    <p>Complete menu with all categories and dishes</p>
+                </div>
+                
+                <div class="menu-container">
+                    <div class="alert" id="full-menu-alert" style="display: none;"></div>
+                    <div id="full-menu-content" class="full-menu-view">
+                        <div class="empty-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading full menu...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </main>
+
+    <!-- Sidebar Overlay for Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <script>
+        const managerId = '{{ manager_id }}';
+        
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all menu items
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Add active class to clicked menu item
+            if (event && event.target) {
+                event.target.closest('.menu-item').classList.add('active');
+            }
+            
+            // Close sidebar on mobile after selection
+            if (window.innerWidth <= 768) {
+                document.querySelector('.sidebar').classList.remove('open');
+                document.getElementById('sidebarOverlay').classList.remove('show');
+            }
+            
+            // Load section-specific data
+            if (sectionId === 'verification') {
+                loadVerificationData();
+            } else if (sectionId === 'menu') {
+                loadMenuCategories();
+                loadMenuDishes(1); // Load starters by default
+            } else if (sectionId === 'full-menu') {
+                loadFullMenuSection();
+            } else if (sectionId === 'table-orders') {
+                loadTablesData();
+            }
+        }
+        
+        function toggleDropdown() {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        }
+        
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('show');
+        }
+        
+        // Close dropdown when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.closest('.profile-dropdown')) {
+                document.getElementById('dropdownMenu').classList.remove('show');
+            }
+        }
+        
+        function handleAddWaiter(event) {
+            event.preventDefault();
+            const name = document.getElementById('waiter-name').value;
+            const email = document.getElementById('waiter-email').value;
+            const phone = document.getElementById('waiter-phone').value;
+            
+            fetch('/hotel-manager/add-waiter', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, email, phone, manager_id: managerId})
+            })
+            .then(response => response.json())
+            .then(data => {
+                showMessage(data.message, data.success ? 'success' : 'error');
+                if (data.success) {
+                    document.querySelector('.waiter-form').reset();
+                    setTimeout(() => { location.reload(); }, 1500);
+                }
+            });
+        }
+        
+        function deleteWaiter(waiterId) {
+            if (confirm('Are you sure you want to delete this waiter?')) {
+                fetch('/hotel-manager/delete-waiter', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({waiter_id: waiterId, manager_id: managerId})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    showMessage(data.message, data.success ? 'success' : 'error');
+                    if (data.success) {
+                        setTimeout(() => { location.reload(); }, 1500);
+                    }
+                });
+            }
+        }
+        
+        function showMessage(message, type) {
+            const el = document.getElementById('message');
+            el.textContent = message;
+            el.className = 'message ' + type;
+        }
+        
+        function logout() {
+            window.location.href = '/';
+        }
+        
+        // Verification Dashboard Functions
+        function loadVerificationData() {
+            // Load verification requests
+            fetch(`/guest-verification/api/verifications/${managerId}`)
+                .then(response => response.json())
+                .then(data => {
+                    renderVerificationTable(data.verifications);
+                })
+                .catch(error => {
+                    console.error('Error loading verification data:', error);
+                    document.getElementById('verification-content').innerHTML = 
+                        '<div style="text-align: center; padding: 3rem; color: #ef4444;"><i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 1rem;"></i><p>Error loading verification requests</p></div>';
+                });
+            
+            // Load QR code
+            loadQRCode();
+        }
+        
+        function renderVerificationTable(verifications) {
+            const container = document.getElementById('verification-content');
+            
+            if (verifications.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: #718096;">
+                        <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                        <h3>No Verification Requests</h3>
+                        <p>Share the QR code with guests to start receiving verification requests</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let tableHTML = `
+                <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                    <thead>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Guest Name</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Phone</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Submitted</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Status</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            verifications.forEach(verification => {
+                const statusClass = `status-${verification.status}`;
+                const statusColors = {
+                    'pending': 'background: #fef3c7; color: #92400e;',
+                    'approved': 'background: #d1fae5; color: #065f46;',
+                    'rejected': 'background: #fee2e2; color: #991b1b;'
+                };
+                
+                tableHTML += `
+                    <tr style="border-bottom: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                        <td style="padding: 1rem;">
+                            <div style="font-weight: 600; color: #2d3748;">${verification.guest_name}</div>
+                            <div style="font-size: 0.8rem; color: #718096;">ID: ${verification.kyc_number}</div>
+                        </td>
+                        <td style="padding: 1rem;">${verification.phone}</td>
+                        <td style="padding: 1rem;">
+                            <div>${new Date(verification.submitted_at).toLocaleDateString()}</div>
+                            <div style="font-size: 0.8rem; color: #718096;">${new Date(verification.submitted_at).toLocaleTimeString()}</div>
+                        </td>
+                        <td style="padding: 1rem;">
+                            <span style="padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; ${statusColors[verification.status]}">
+                                ${verification.status}
+                            </span>
+                        </td>
+                        <td style="padding: 1rem;">
+                            ${verification.status === 'pending' ? `
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button onclick="updateVerificationStatus(${verification.id}, 'approved')" style="background: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
+                                        <i class="fas fa-check"></i> Approve
+                                    </button>
+                                    <button onclick="updateVerificationStatus(${verification.id}, 'rejected')" style="background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem;">
+                                        <i class="fas fa-times"></i> Reject
+                                    </button>
+                                </div>
+                            ` : '<span style="color: #718096; font-size: 0.8rem;">No action needed</span>'}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += '</tbody></table>';
+            container.innerHTML = tableHTML;
+        }
+        
+        function loadQRCode() {
+            fetch(`/guest-verification/api/qr-code/${managerId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const qrContainer = document.getElementById('qr-code-container');
+                    const urlContainer = document.getElementById('public-url-container');
+                    const downloadBtn = document.getElementById('download-qr-btn');
+                    const urlLink = document.getElementById('public-url-link');
+                    
+                    qrContainer.innerHTML = `<img src="data:image/png;base64,${data.qr_code}" alt="QR Code" style="max-width: 200px; border: 3px solid #e2e8f0; border-radius: 12px;">`;
+                    urlLink.href = data.public_url;
+                    urlLink.textContent = data.public_url;
+                    urlContainer.style.display = 'block';
+                    downloadBtn.style.display = 'inline-block';
+                    downloadBtn.onclick = () => window.open(`/guest-verification/download-qr/${managerId}`, '_blank');
+                })
+                .catch(error => {
+                    console.error('Error loading QR code:', error);
+                    document.getElementById('qr-code-container').innerHTML = 
+                        '<div style="background: #fee2e2; border: 2px dashed #fca5a5; border-radius: 8px; padding: 2rem; color: #991b1b;"><i class="fas fa-exclamation-triangle" style="font-size: 2rem;"></i><p style="margin-top: 1rem;">Error loading QR code</p></div>';
+                });
+        }
+        
+        function updateVerificationStatus(verificationId, status) {
+            if (confirm(`Are you sure you want to ${status} this verification request?`)) {
+                fetch('/guest-verification/update-status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        verification_id: verificationId,
+                        status: status
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadVerificationData(); // Reload the data
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error updating status. Please try again.');
+                });
+            }
+        }
+        
+        // Menu Management Functions
+        let currentCategoryId = 1;
+        let isEditMode = false;
+        let menuCategories = {1: 'Starters', 2: 'Main Course', 3: 'Desserts'};
+        let currentImageIndex = 0;
+        let currentImages = [];
+        let isFullMenuView = false;
+
+        function showMenuAlert(message, type = 'success') {
+            const alert = document.getElementById('menu-alert');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 4000);
+        }
+
+        function loadMenuCategories() {
+            fetch('/api/categories')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        menuCategories = data.categories;
+                        updateMenuCategoryTabs();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading categories:', error);
+                    showMenuAlert('Error loading categories', 'error');
+                });
+        }
+
+        function updateMenuCategoryTabs() {
+            const tabsContainer = document.getElementById('menu-tabs');
+            const addButton = tabsContainer.querySelector('.add-tab');
+            
+            const existingTabs = tabsContainer.querySelectorAll('.tab:not(.add-tab)');
+            existingTabs.forEach(tab => tab.remove());
+            
+            Object.entries(menuCategories).forEach(([id, name]) => {
+                const tab = document.createElement('button');
+                tab.className = 'tab';
+                tab.setAttribute('data-category', id);
+                tab.textContent = name;
+                tab.onclick = function() { showMenuCategory(parseInt(id), this); };
+                
+                if (parseInt(id) === currentCategoryId) {
+                    tab.classList.add('active');
+                }
+                
+                tabsContainer.insertBefore(tab, addButton);
+            });
+        }
+
+        function showMenuCategory(categoryId, tabElement) {
+            currentCategoryId = categoryId;
+            
+            document.querySelectorAll('.menu-tabs .tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            tabElement.classList.add('active');
+            
+            document.getElementById('add-dish-btn').style.display = 'block';
+            document.getElementById('dishes-table').style.display = 'table';
+            document.getElementById('full-menu-view').style.display = 'none';
+            
+            // Show category actions for non-default categories
+            const categoryActions = document.getElementById('category-actions');
+            if (categoryId > 3) { // Only show for custom categories
+                categoryActions.style.display = 'flex';
+            } else {
+                categoryActions.style.display = 'none';
+            }
+            
+            loadMenuDishes(categoryId);
+        }
+
+        function loadFullMenuSection() {
+            fetch('/api/full-menu')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        renderFullMenuSection(data.menu);
+                    } else {
+                        showFullMenuAlert('Error loading full menu: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading full menu:', error);
+                    showFullMenuAlert('Error loading full menu', 'error');
+                });
+        }
+
+        function renderFullMenuSection(menu) {
+            const fullMenuContent = document.getElementById('full-menu-content');
+            
+            let menuHTML = '<div class="menu-book">';
+            
+            menu.forEach(category => {
+                if (category.dishes.length > 0) {
+                    menuHTML += `
+                        <div class="menu-category">
+                            <h2 class="category-header">${escapeMenuHtml(category.category_name)}</h2>
+                            <div class="category-dishes">
+                    `;
+                    
+                    category.dishes.forEach(dish => {
+                        const firstImageUrl = dish.image_urls && dish.image_urls.length > 0 ? dish.image_urls[0] : null;
+                        menuHTML += `
+                            <div class="menu-item">
+                                <div class="menu-item-content">
+                                    ${firstImageUrl ? `
+                                        <div class="menu-item-image" onclick="viewFullMenuDishImages(${dish.id})">
+                                            <img src="${firstImageUrl}" alt="${escapeMenuHtml(dish.name)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+                                        </div>
+                                    ` : `
+                                        <div class="menu-item-image" onclick="viewFullMenuDishImages(${dish.id})">
+                                            <div class="image-placeholder">
+                                                <i class="fas fa-image"></i>
+                                                <span>No Image</span>
+                                            </div>
+                                        </div>
+                                    `}
+                                    <div class="menu-item-details">
+                                        <div class="menu-item-header">
+                                            <h4 class="dish-name">${escapeMenuHtml(dish.name)}</h4>
+                                            <span class="dish-price">₹${dish.price.toFixed(2)}</span>
+                                        </div>
+                                        <p class="dish-description">${escapeMenuHtml(dish.description || 'No description available')}</p>
+                                        <div class="dish-meta">
+                                            <span class="dish-quantity">Quantity: ${escapeMenuHtml(dish.quantity)}</span>
+                                            ${dish.images && dish.images.length > 0 ? `<span class="image-count">${dish.images.length} image${dish.images.length > 1 ? 's' : ''}</span>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    menuHTML += '</div></div>';
+                }
+            });
+            
+            if (menu.every(category => category.dishes.length === 0)) {
+                menuHTML = `
+                    <div style="text-align: center; padding: 4rem; color: #718096;">
+                        <i class="fas fa-utensils" style="font-size: 4rem; margin-bottom: 1rem; color: #cbd5e0;"></i>
+                        <h3>No dishes available</h3>
+                        <p>Add some dishes to your menu categories to see them here</p>
+                    </div>
+                `;
+            } else {
+                menuHTML += '</div>';
+            }
+            
+            fullMenuContent.innerHTML = menuHTML;
+        }
+
+        function showFullMenuAlert(message, type = 'success') {
+            const alert = document.getElementById('full-menu-alert');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 4000);
+        }
+
+        function viewFullMenuDishImages(dishId) {
+            viewMenuDishImages(dishId);
+        }
+
+        function loadMenuDishes(categoryId) {
+            fetch(`/api/dishes/${categoryId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        renderMenuDishes(data.dishes);
+                        updateMenuCategoryTitle(categoryId);
+                    } else {
+                        showMenuAlert('Error loading dishes: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading dishes:', error);
+                    showMenuAlert('Error loading dishes', 'error');
+                });
+        }
+
+        function renderMenuDishes(dishes) {
+            const tbody = document.getElementById('dishes-tbody');
+            const table = document.getElementById('dishes-table');
+            const emptyState = document.getElementById('empty-state');
+            
+            if (dishes.length === 0) {
+                table.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            table.style.display = 'table';
+            emptyState.style.display = 'none';
+            
+            tbody.innerHTML = dishes.map(dish => `
+                <tr>
+                    <td class="image-cell">
+                        ${dish.images && dish.images.length > 0 ? `
+                            <div class="dish-thumbnail" onclick="viewMenuDishImages(${dish.id})" title="Click to view all images">
+                                <img src="${dish.image_urls[0]}" alt="${escapeMenuHtml(dish.name)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+                            </div>
+                        ` : `
+                            <div class="no-image">
+                                <i class="fas fa-image"></i>
+                            </div>
+                        `}
+                    </td>
+                    <td>
+                        <div class="dish-name">${escapeMenuHtml(dish.name)}</div>
+                        <div class="dish-desc">${escapeMenuHtml(dish.description || 'No description')}</div>
+                    </td>
+                    <td class="price">₹${dish.price.toFixed(2)}</td>
+                    <td class="quantity">${escapeMenuHtml(dish.quantity)}</td>
+                    <td class="actions">
+                        <button class="btn-action btn-edit" onclick="editMenuDish(${dish.id})" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-action btn-delete" onclick="deleteMenuDish(${dish.id})" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function escapeMenuHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function updateMenuCategoryTitle(categoryId) {
+            document.getElementById('category-title').textContent = menuCategories[categoryId] || 'Category';
+        }
+
+        function showAddDishModal() {
+            isEditMode = false;
+            document.getElementById('modal-title').textContent = 'Add New Dish';
+            document.getElementById('submit-btn').textContent = 'Add Dish';
+            document.getElementById('dish-form').reset();
+            document.getElementById('dish-id').value = '';
+            document.getElementById('category-id').value = currentCategoryId;
+            document.getElementById('dish-images').setAttribute('required', 'required');
+            updateImageSelectionInfo([]);
+            document.getElementById('dish-modal').style.display = 'flex';
+        }
+
+        function showAddCategoryModal() {
+            document.getElementById('category-modal-title').textContent = 'Add New Category';
+            document.getElementById('category-submit-btn').textContent = 'Add Category';
+            document.getElementById('category-form').reset();
+            document.getElementById('edit-category-id').value = '';
+            document.getElementById('category-modal').style.display = 'flex';
+        }
+
+        function editCategory() {
+            const categoryName = menuCategories[currentCategoryId];
+            document.getElementById('category-modal-title').textContent = 'Edit Category';
+            document.getElementById('category-submit-btn').textContent = 'Update Category';
+            document.getElementById('edit-category-id').value = currentCategoryId;
+            document.getElementById('category-name').value = categoryName;
+            document.getElementById('category-modal').style.display = 'flex';
+        }
+
+        function deleteCategory() {
+            const categoryName = menuCategories[currentCategoryId];
+            const dishCount = document.querySelectorAll('#dishes-tbody tr').length;
+            
+            let confirmMessage = `Are you sure you want to delete the category "${categoryName}"?`;
+            if (dishCount > 0) {
+                confirmMessage += ` This will also delete ${dishCount} dish(es) in this category.`;
+            }
+            confirmMessage += ' This action cannot be undone.';
+            
+            if (confirm(confirmMessage)) {
+                fetch('/api/delete-category', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({category_id: currentCategoryId})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMenuAlert(data.message);
+                        delete menuCategories[currentCategoryId];
+                        
+                        // Switch to first available category
+                        const firstCategoryId = parseInt(Object.keys(menuCategories)[0]);
+                        currentCategoryId = firstCategoryId;
+                        updateMenuCategoryTabs();
+                        
+                        const firstTab = document.querySelector(`[data-category="${firstCategoryId}"]`);
+                        if (firstTab) {
+                            showMenuCategory(firstCategoryId, firstTab);
+                        }
+                    } else {
+                        showMenuAlert('Error: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting category:', error);
+                    showMenuAlert('Error deleting category', 'error');
+                });
+            }
+        }
+
+        function editMenuDish(dishId) {
+            isEditMode = true;
+            document.getElementById('modal-title').textContent = 'Edit Dish';
+            document.getElementById('submit-btn').textContent = 'Update Dish';
+            
+            fetch(`/api/dish/${dishId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const dish = data.dish;
+                        document.getElementById('dish-id').value = dish.id;
+                        document.getElementById('dish-name').value = dish.name;
+                        document.getElementById('dish-price').value = dish.price;
+                        document.getElementById('dish-quantity').value = dish.quantity;
+                        document.getElementById('dish-description').value = dish.description || '';
+                        document.getElementById('dish-images').removeAttribute('required');
+                        updateImageSelectionInfo([]);
+                        document.getElementById('dish-modal').style.display = 'flex';
+                    } else {
+                        showMenuAlert('Error: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading dish:', error);
+                    showMenuAlert('Error loading dish details', 'error');
+                });
+        }
+
+        function viewMenuDishImages(dishId) {
+            fetch(`/api/dish/${dishId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const dish = data.dish;
+                        document.getElementById('images-modal-title').textContent = dish.name;
+                        
+                        document.getElementById('dish-details').innerHTML = `
+                            <div class="dish-info">
+                                <h4>${escapeMenuHtml(dish.name)}</h4>
+                                <p class="price">Price: ₹${dish.price.toFixed(2)}</p>
+                                <p class="quantity">Quantity: ${escapeMenuHtml(dish.quantity)}</p>
+                                <p class="description">${escapeMenuHtml(dish.description || 'No description available')}</p>
+                            </div>
+                        `;
+                        
+                        if (dish.images && dish.images.length > 0) {
+                            currentImages = dish.image_urls || dish.images;
+                            currentImageIndex = 0;
+                            setupImageSlider();
+                        } else {
+                            document.getElementById('image-slider-container').innerHTML = `
+                                <div class="no-images">
+                                    <i class="fas fa-image"></i>
+                                    <p>No images uploaded for this dish</p>
+                                </div>
+                            `;
+                        }
+                        
+                        document.getElementById('images-modal').style.display = 'flex';
+                    } else {
+                        showMenuAlert('Error: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading dish images:', error);
+                    showMenuAlert('Error loading dish details', 'error');
+                });
+        }
+
+        function setupImageSlider() {
+            const sliderImages = document.getElementById('slider-images');
+            const sliderDots = document.getElementById('slider-dots');
+            
+            sliderImages.innerHTML = currentImages.map((image, index) => `
+                <div class="slider-image ${index === 0 ? 'active' : ''}" data-index="${index}">
+                    ${image.startsWith('/static/') || image.startsWith('http') ? `
+                        <img src="${image}" alt="Dish image" style="width: 100%; height: 100%; object-fit: contain;">
+                    ` : `
+                        <div class="image-placeholder">
+                            <i class="fas fa-image"></i>
+                            <p>${escapeMenuHtml(image)}</p>
+                            <small>Image file stored</small>
+                        </div>
+                    `}
+                </div>
+            `).join('');
+            
+            sliderDots.innerHTML = currentImages.map((_, index) => `
+                <div class="dot ${index === 0 ? 'active' : ''}" onclick="goToImage(${index})"></div>
+            `).join('');
+            
+            updateSliderNavigation();
+        }
+
+        function prevImage() {
+            if (currentImageIndex > 0) {
+                currentImageIndex--;
+                updateSlider();
+            }
+        }
+
+        function nextImage() {
+            if (currentImageIndex < currentImages.length - 1) {
+                currentImageIndex++;
+                updateSlider();
+            }
+        }
+
+        function goToImage(index) {
+            currentImageIndex = index;
+            updateSlider();
+        }
+
+        function updateSlider() {
+            document.querySelectorAll('.slider-image').forEach((img, index) => {
+                img.classList.toggle('active', index === currentImageIndex);
+            });
+            
+            document.querySelectorAll('.dot').forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentImageIndex);
+            });
+            
+            updateSliderNavigation();
+        }
+
+        function updateSliderNavigation() {
+            const prevBtn = document.querySelector('.slider-nav.prev');
+            const nextBtn = document.querySelector('.slider-nav.next');
+            
+            if (prevBtn) prevBtn.style.opacity = currentImageIndex === 0 ? '0.3' : '1';
+            if (nextBtn) nextBtn.style.opacity = currentImageIndex === currentImages.length - 1 ? '0.3' : '1';
+        }
+
+        function deleteMenuDish(dishId) {
+            if (confirm('Are you sure you want to delete this dish? This action cannot be undone.')) {
+                fetch('/api/delete-dish', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({dish_id: dishId})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMenuAlert('Dish deleted successfully');
+                        loadMenuDishes(currentCategoryId);
+                    } else {
+                        showMenuAlert('Error: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting dish:', error);
+                    showMenuAlert('Error deleting dish', 'error');
+                });
+            }
+        }
+
+        function closeDishModal() {
+            document.getElementById('dish-modal').style.display = 'none';
+        }
+
+        function closeCategoryModal() {
+            document.getElementById('category-modal').style.display = 'none';
+        }
+
+        function closeImagesModal() {
+            document.getElementById('images-modal').style.display = 'none';
+        }
+
+        function updateImageSelectionInfo(files) {
+            const infoDiv = document.getElementById('image-selection-info');
+            
+            if (files.length === 0) {
+                infoDiv.innerHTML = '';
+                return;
+            }
+            
+            let infoHTML = `<div class="selected-images">`;
+            for (let i = 0; i < files.length; i++) {
+                infoHTML += `<span class="image-selected"><i class="fas fa-check-circle"></i> ${escapeMenuHtml(files[i].name)}</span>`;
+            }
+            infoHTML += `</div><small class="image-count">${files.length}/3 images selected ✓</small>`;
+            infoDiv.innerHTML = infoHTML;
+        }
+
+        // Form submissions for menu
+        document.addEventListener('DOMContentLoaded', function() {
+            const dishForm = document.getElementById('dish-form');
+            if (dishForm) {
+                dishForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData(this);
+                    const url = isEditMode ? '/api/edit-dish' : '/api/add-dish';
+                    
+                    const submitBtn = document.getElementById('submit-btn');
+                    const originalText = submitBtn.textContent;
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Saving...';
+                    
+                    fetch(url, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showMenuAlert(data.message);
+                            closeDishModal();
+                            loadMenuDishes(currentCategoryId);
+                        } else {
+                            showMenuAlert('Error: ' + data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error saving dish:', error);
+                        showMenuAlert('Error saving dish', 'error');
+                    })
+                    .finally(() => {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = originalText;
+                    });
+                });
+            }
+
+            const categoryForm = document.getElementById('category-form');
+            if (categoryForm) {
+                categoryForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const categoryName = document.getElementById('category-name').value.trim();
+                    const categoryId = document.getElementById('edit-category-id').value;
+                    const isEdit = categoryId !== '';
+                    
+                    if (!categoryName) {
+                        showMenuAlert('Category name is required', 'error');
+                        return;
+                    }
+                    
+                    const submitBtn = document.getElementById('category-submit-btn');
+                    const originalText = submitBtn.textContent;
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = isEdit ? 'Updating...' : 'Adding...';
+                    
+                    const url = isEdit ? '/api/edit-category' : '/api/add-category';
+                    const payload = isEdit ? 
+                        {name: categoryName, category_id: parseInt(categoryId)} : 
+                        {name: categoryName};
+                    
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showMenuAlert(data.message);
+                            closeCategoryModal();
+                            
+                            menuCategories[data.category.id] = data.category.name;
+                            updateMenuCategoryTabs();
+                            
+                            if (isEdit) {
+                                updateMenuCategoryTitle(data.category.id);
+                            } else {
+                                currentCategoryId = data.category.id;
+                                const newTab = document.querySelector(`[data-category="${data.category.id}"]`);
+                                if (newTab) {
+                                    document.querySelectorAll('.menu-tabs .tab').forEach(tab => {
+                                        tab.classList.remove('active');
+                                    });
+                                    newTab.classList.add('active');
+                                    loadMenuDishes(data.category.id);
+                                }
+                            }
+                        } else {
+                            showMenuAlert('Error: ' + data.message, 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error saving category:', error);
+                        showMenuAlert('Error saving category', 'error');
+                    })
+                    .finally(() => {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = originalText;
+                    });
+                });
+            }
+
+            const dishImages = document.getElementById('dish-images');
+            if (dishImages) {
+                dishImages.addEventListener('change', function(e) {
+                    const files = Array.from(e.target.files);
+                    
+                    if (files.length > 3) {
+                        showMenuAlert('Maximum 3 images allowed. Please select only 3 images.', 'error');
+                        e.target.value = '';
+                        updateImageSelectionInfo([]);
+                        return;
+                    }
+                    
+                    const invalidFiles = files.filter(file => {
+                        const extension = file.name.split('.').pop().toLowerCase();
+                        return !['png', 'jpg', 'jpeg', 'gif'].includes(extension);
+                    });
+                    
+                    if (invalidFiles.length > 0) {
+                        showMenuAlert('Only PNG, JPG, JPEG, and GIF files are allowed.', 'error');
+                        e.target.value = '';
+                        updateImageSelectionInfo([]);
+                        return;
+                    }
+                    
+                    updateImageSelectionInfo(files);
+                });
+            }
+        });
+        
+        // Table Orders Functions
+        function showTableSubSection(subSectionId) {
+            // Hide all sub-sections
+            document.querySelectorAll('.sub-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all sub-nav buttons
+            document.querySelectorAll('.sub-nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected sub-section
+            document.getElementById(subSectionId).classList.add('active');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            // Load data based on sub-section
+            if (subSectionId === 'manage-tables') {
+                loadTablesData();
+            } else if (subSectionId === 'view-orders') {
+                loadOrdersData();
+            }
+        }
+        
+        function loadTablesData() {
+            fetch('/orders/api/tables')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        renderTablesData(data.tables);
+                    } else {
+                        document.getElementById('tables-list').innerHTML = 
+                            '<div style="text-align: center; padding: 2rem; color: #ef4444;">Error loading tables</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading tables:', error);
+                    document.getElementById('tables-list').innerHTML = 
+                        '<div style="text-align: center; padding: 2rem; color: #ef4444;">Error loading tables</div>';
+                });
+        }
+        
+        function renderTablesData(tables) {
+            const container = document.getElementById('tables-list');
+            
+            if (tables.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: #718096;">
+                        <i class="fas fa-table" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                        <h3>No Tables Created</h3>
+                        <p>Add your first table to start using QR-based ordering</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let tablesHTML = '<div class="tables-grid">';
+            
+            tables.forEach(table => {
+                const statusClass = table.status === 'BUSY' ? 'busy' : 'available';
+                const statusText = table.status === 'BUSY' ? 'BUSY' : 'AVAILABLE';
+                const qrPreview = table.qr_code_path ? 
+                    `<img src="/${table.qr_code_path}" alt="QR Code" style="width: 80px; height: 80px; border: 2px solid #e2e8f0; border-radius: 8px;">` :
+                    '<div style="width: 80px; height: 80px; background: #f7fafc; border: 2px dashed #cbd5e0; border-radius: 8px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-qrcode" style="color: #cbd5e0;"></i></div>';
+                
+                tablesHTML += `
+                    <div class="table-item">
+                        <div class="table-header">
+                            <h4>Table ${table.table_number}</h4>
+                            <span class="status-badge status-${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="qr-preview">${qrPreview}</div>
+                        <div class="table-actions">
+                            <button onclick="downloadTableQR(${table.id})" class="btn-secondary btn-sm">
+                                <i class="fas fa-download"></i> Download QR
+                            </button>
+                            <button onclick="deleteTable('${table.table_number}')" class="btn-danger btn-sm" style="margin-left: 0.5rem;">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            tablesHTML += '</div>';
+            container.innerHTML = tablesHTML;
+        }
+        
+        function handleAddTable(event) {
+            event.preventDefault();
+            const tableNumber = document.getElementById('table-number').value.trim();
+            
+            if (!tableNumber) {
+                showTableMessage('Table number is required', 'error');
+                return;
+            }
+            
+            fetch('/orders/api/tables', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({table_number: tableNumber})
+            })
+            .then(response => response.json())
+            .then(data => {
+                showTableMessage(data.message, data.success ? 'success' : 'error');
+                if (data.success) {
+                    document.getElementById('table-number').value = '';
+                    loadTablesData();
+                }
+            })
+            .catch(error => {
+                console.error('Error adding table:', error);
+                showTableMessage('Error adding table', 'error');
+            });
+        }
+        
+        function downloadTableQR(tableId) {
+            window.open(`/orders/api/download-qr/${tableId}`, '_blank');
+        }
+        
+        function loadOrdersData() {
+            fetch('/orders/api/orders')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        renderOrdersData(data.orders);
+                    } else {
+                        document.getElementById('orders-list').innerHTML = 
+                            '<div style="text-align: center; padding: 2rem; color: #ef4444;">Error loading orders</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading orders:', error);
+                    document.getElementById('orders-list').innerHTML = 
+                        '<div style="text-align: center; padding: 2rem; color: #ef4444;">Error loading orders</div>';
+                });
+        }
+        
+        function renderOrdersData(orders) {
+            const container = document.getElementById('orders-list');
+            
+            if (orders.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: #718096;">
+                        <i class="fas fa-receipt" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                        <h3>No Orders Yet</h3>
+                        <p>Orders will appear here when customers place them via QR codes</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let ordersHTML = `
+                <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                    <thead>
+                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Order ID</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Table</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Items</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Total</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Status</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Payment</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Time</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            orders.forEach(order => {
+                const itemsText = order.items.map(item => `${item.name} (x${item.quantity})`).join(', ');
+                const orderTime = new Date(order.created_at).toLocaleString();
+                const orderStatusClass = order.order_status === 'COMPLETED' ? 'paid' : (order.order_status === 'PREPARING' ? 'busy' : 'pending');
+                const paymentClass = order.payment_status === 'PAID' ? 'paid' : 'pending';
+                
+                ordersHTML += `
+                    <tr style="border-bottom: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                        <td style="padding: 1rem; font-weight: 600;">#${order.id}</td>
+                        <td style="padding: 1rem;">
+                            <span class="table-badge">Table ${order.table_number}</span>
+                        </td>
+                        <td style="padding: 1rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${itemsText}</td>
+                        <td style="padding: 1rem; font-weight: 600;">$${parseFloat(order.total_amount).toFixed(2)}</td>
+                        <td style="padding: 1rem;">
+                            <span class="status-badge status-${orderStatusClass}">${order.order_status}</span>
+                        </td>
+                        <td style="padding: 1rem;">
+                            <span class="status-badge status-${paymentClass}">${order.payment_status}</span>
+                        </td>
+                        <td style="padding: 1rem; color: #718096; font-size: 0.9rem;">${orderTime}</td>
+                        <td style="padding: 1rem;">
+                            ${order.order_status !== 'COMPLETED' ? `
+                                <button onclick="updateOrderStatus(${order.id}, 'PREPARING')" class="btn-secondary btn-sm" style="margin-right: 0.5rem;">
+                                    <i class="fas fa-clock"></i> Preparing
+                                </button>
+                                <button onclick="updateOrderStatus(${order.id}, 'COMPLETED')" class="btn-primary btn-sm">
+                                    <i class="fas fa-check"></i> Complete
+                                </button>
+                            ` : '<span style="color: #10b981;">✓ Completed</span>'}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            ordersHTML += '</tbody></table>';
+            container.innerHTML = ordersHTML;
+        }
+        
+        function updateOrderStatus(orderId, status) {
+            if (!confirm(`Mark this order as ${status.toLowerCase()}?`)) {
+                return;
+            }
+            
+            fetch('/orders/api/update-order-status', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({order_id: orderId, status: status})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showTableMessage(`Order marked as ${status.toLowerCase()}!`, 'success');
+                    loadOrdersData();
+                    loadTablesData();
+                } else {
+                    showTableMessage('Error: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating order status:', error);
+                showTableMessage('Error updating order status', 'error');
+            });
+        }
+        
+        function showTableMessage(message, type) {
+            const el = document.getElementById('table-message');
+            el.textContent = message;
+            el.className = 'message ' + type;
+            
+            setTimeout(() => {
+                el.textContent = '';
+                el.className = 'message';
+            }, 5000);
+        }
+        
+        function deleteTable(tableNumber) {
+            if (!confirm(`Delete Table ${tableNumber}? This will remove all associated orders and QR code.`)) {
+                return;
+            }
+            
+            fetch(`/orders/api/tables/${tableNumber}`, {method: 'DELETE'})
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showTableMessage(data.message, 'success');
+                    loadTablesData();
+                } else {
+                    showTableMessage('Error: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting table:', error);
+                showTableMessage('Error deleting table', 'error');
+            });
+        }
+    </script>
+</body>
+</html>
