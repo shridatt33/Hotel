@@ -68,19 +68,25 @@
                 </div>
                 <div class="tables-scroll">
                     {% for table in tables %}
-                    <div class="table-chip {{ 'occupied' if table.status == 'occupied' else 'available' }}">
+                    <div class="table-chip {{ 'occupied' if table.status == 'BUSY' else 'available' }}">
                         <div class="table-number">T{{ table.table_number }}</div>
                         <div class="table-status">
-                            {% if table.status == 'occupied' %}
+                            {% if table.status == 'BUSY' %}
                             <i class="fas fa-user"></i> Occupied
                             {% else %}
                             <i class="fas fa-check"></i> Free
                             {% endif %}
                         </div>
                     </div>
+                    {% else %}
+                    <div class="empty-state" style="padding: 20px; text-align: center; color: var(--gray-400);">
+                        <p>No tables assigned yet</p>
+                    </div>
                     {% endfor %}
                 </div>
             </section>
+
+
 
             <!-- Active Orders Section -->
             <section class="card-section" id="active-orders">
@@ -290,6 +296,8 @@
             loadAllOrders();
             startAutoRefresh();
         });
+
+
 
         // ============================================
         // SECTION NAVIGATION

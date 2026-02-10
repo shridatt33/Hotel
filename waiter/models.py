@@ -143,19 +143,25 @@ class WaiterAuth:
     
     @staticmethod
     def get_assigned_tables(waiter_id):
-        """Get all tables assigned to a waiter"""
+        """Get all tables assigned to a waiter using waiter_id column"""
         try:
             connection = get_db_connection()
             cursor = connection.cursor(dictionary=True)
             
             cursor.execute("""
-                SELECT t.*, wta.assigned_at
+                SELECT t.*, 
+                       CASE WHEN at.status = 'ACTIVE' THEN 'BUSY' ELSE t.status END as derived_status
                 FROM tables t
-                JOIN waiter_table_assignments wta ON t.id = wta.table_id
-                WHERE wta.waiter_id = %s
+                LEFT JOIN active_tables at ON t.id = at.table_id AND at.status = 'ACTIVE'
+                WHERE t.waiter_id = %s
                 ORDER BY t.table_number
             """, (waiter_id,))
             tables = cursor.fetchall()
+            
+            # Update status to derived status
+            for table in tables:
+                if table.get('derived_status'):
+                    table['status'] = table['derived_status']
             
             cursor.close()
             connection.close()
@@ -165,7 +171,7 @@ class WaiterAuth:
     
     @staticmethod
     def get_orders_for_waiter(waiter_id, status=None):
-        """Get all orders from tables assigned to the waiter"""
+        """Get all orders from tables assigned to the waiter using waiter_id column"""
         try:
             connection = get_db_connection()
             cursor = connection.cursor(dictionary=True)
@@ -177,8 +183,7 @@ class WaiterAuth:
                     t.status as table_status
                 FROM table_orders o
                 JOIN tables t ON o.table_id = t.id
-                JOIN waiter_table_assignments wta ON t.id = wta.table_id
-                WHERE wta.waiter_id = %s
+                WHERE t.waiter_id = %s
             """
             params = [waiter_id]
             
@@ -199,7 +204,7 @@ class WaiterAuth:
     
     @staticmethod
     def update_order_status(order_id, new_status, waiter_id):
-        """Update order status (only if order belongs to waiter's tables)"""
+        """Update order status (only if order belongs to waiter's tables using waiter_id)"""
         try:
             connection = get_db_connection()
             cursor = connection.cursor(dictionary=True)
@@ -207,8 +212,8 @@ class WaiterAuth:
             # Verify order belongs to waiter's assigned tables
             cursor.execute("""
                 SELECT o.* FROM table_orders o
-                JOIN waiter_table_assignments wta ON o.table_id = wta.table_id
-                WHERE o.id = %s AND wta.waiter_id = %s
+                JOIN tables t ON o.table_id = t.id
+                WHERE o.id = %s AND t.waiter_id = %s
             """, (order_id, waiter_id))
             
             if not cursor.fetchone():

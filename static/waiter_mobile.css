@@ -1320,3 +1320,129 @@ body {
         bottom: calc(var(--bottom-bar-height) + 40px);
     }
 }
+
+/* --------------------------------------------------------------------------
+   Tables Grid (for All Tables section)
+   -------------------------------------------------------------------------- */
+.tables-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+    padding: 16px;
+}
+
+.table-card {
+    background: var(--white);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: var(--transition);
+}
+
+.table-card.available {
+    border-color: var(--success);
+    background: var(--success-light);
+}
+
+.table-card.occupied {
+    border-color: var(--warning);
+    background: var(--warning-light);
+}
+
+.table-card.assigned-to-me {
+    border-color: var(--primary);
+    border-width: 3px;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.table-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.table-card .table-number {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--gray-800);
+}
+
+.table-card .status-badge {
+    font-size: 0.65rem;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.table-card .status-badge.available {
+    background: var(--success);
+    color: var(--white);
+}
+
+.table-card .status-badge.occupied {
+    background: var(--warning);
+    color: var(--white);
+}
+
+.table-card-body {
+    flex: 1;
+}
+
+.waiter-info-small {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--gray-600);
+}
+
+.waiter-info-small i {
+    color: var(--gray-400);
+}
+
+.table-card-actions {
+    margin-top: 8px;
+}
+
+.table-action-btn {
+    width: 100%;
+    padding: 10px 14px;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.table-action-btn:active {
+    transform: scale(0.98);
+}
+
+.table-action-btn.assign {
+    background: var(--primary);
+    color: var(--white);
+}
+
+.table-action-btn.unassign {
+    background: var(--danger);
+    color: var(--white);
+}
+
+.table-action-btn.disabled {
+    background: var(--gray-200);
+    color: var(--gray-400);
+    cursor: not-allowed;
+}
+
+.table-action-btn.disabled:active {
+    transform: none;
+}

@@ -662,6 +662,19 @@
         </div>
     </div>
 
+    <!-- Unified Waiter Feature Modal (QR Code / Table Assignments) -->
+    <div class="modal-overlay" id="waiter-feature-modal" onclick="if(event.target === this) closeWaiterFeatureModal()">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 id="waiter-feature-modal-title"><i class="fas fa-qrcode"></i> Waiter Login QR Code</h3>
+                <button class="modal-close" onclick="closeWaiterFeatureModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="waiter-feature-modal-body">
+                <!-- Content will be dynamically loaded -->
+            </div>
+        </div>
+    </div>
+
     <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-brand">
@@ -755,7 +768,6 @@
         <div id="dashboard" class="content-section active">
             <div class="page-header">
                 <h1>👋 Welcome back, {{ manager_name }}!</h1>
-                <p>Here's what's happening with your hotel today.</p>
             </div>
 
             <!-- Wallet Balance Alert -->
@@ -843,44 +855,18 @@
             <div class="card">
                 <div class="card-header">
                     <h3><i class="fas fa-clock"></i> Recent Activity</h3>
-                    <a href="#" style="color: var(--primary); text-decoration: none; font-size: 0.9rem;">View All</a>
+                    <button onclick="loadRecentActivities()" class="btn-refresh-activities" title="Refresh">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
                 </div>
                 <div class="card-body">
-                    <ul class="activity-list">
-                        <li class="activity-item">
-                            <div class="activity-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
-                                <i class="fas fa-bell"></i>
+                    <ul class="activity-list" id="recent-activities-list">
+                        <li class="activity-item loading-state">
+                            <div class="activity-icon">
+                                <i class="fas fa-spinner fa-spin"></i>
                             </div>
                             <div class="activity-content">
-                                <p><strong>New order received</strong> - Table 12 placed an order for ₹1,250</p>
-                                <span class="activity-time">2 minutes ago</span>
-                            </div>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon" style="background: rgba(79, 70, 229, 0.1); color: var(--primary);">
-                                <i class="fas fa-user-check"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p><strong>Guest verified</strong> - John Smith completed ID verification</p>
-                                <span class="activity-time">15 minutes ago</span>
-                            </div>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">
-                                <i class="fas fa-plus"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p><strong>Menu updated</strong> - Added 3 new items to Desserts category</p>
-                                <span class="activity-time">1 hour ago</span>
-                            </div>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon" style="background: rgba(6, 182, 212, 0.1); color: var(--secondary);">
-                                <i class="fas fa-credit-card"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p><strong>Payment received</strong> - Table 5 cleared bill of ₹3,450</p>
-                                <span class="activity-time">2 hours ago</span>
+                                <p>Loading activities...</p>
                             </div>
                         </li>
                     </ul>
@@ -890,73 +876,68 @@
 
         <!-- Waiters Section -->
         <div id="waiters" class="content-section">
-            <div class="page-header">
-                <h1><i class="fas fa-user-tie"></i> Waiters Management</h1>
-                <p>Add, manage and track your restaurant staff with QR-based login</p>
+            <div class="page-header waiters-page-header">
+                <div class="page-header-content">
+                    <h1><i class="fas fa-user-tie"></i> Waiters Management</h1>
+                    <p>Add, manage and track your restaurant staff with QR-based login</p>
+                </div>
+                <button class="btn-primary btn-add-waiter" onclick="openAddWaiterModal()">
+                    <i class="fas fa-plus"></i> Add Waiter
+                </button>
             </div>
-            
-            <!-- Waiter Login QR Code Section -->
-            <div class="form-card qr-section">
-                <h3><i class="fas fa-qrcode"></i> Waiter Login (QR Based)</h3>
-                <p class="section-desc">Generate a QR code for waiters to scan and login. Waiters will enter their ID and name to access their dashboard.</p>
-                
-                <div class="qr-container">
-                    <div class="qr-display" id="qr-display">
-                        <div class="qr-placeholder">
-                            <i class="fas fa-qrcode"></i>
-                            <p>Click the button below to generate QR code</p>
-                        </div>
-                    </div>
-                    
-                    <div class="qr-actions">
-                        <button type="button" class="btn-primary" onclick="generateWaiterQR()">
-                            <i class="fas fa-sync-alt"></i> Generate QR Code
+
+            <!-- Waiters List (Primary View) -->
+            <div class="table-card">
+                <div class="card-header-row">
+                    <h3><i class="fas fa-list"></i> Waiters List</h3>
+                    <div class="header-actions">
+                        <button class="btn-secondary btn-sm" onclick="openQRCodeModal()">
+                            <i class="fas fa-qrcode"></i> QR Code
                         </button>
-                        <button type="button" class="btn-secondary" id="download-qr-btn" onclick="downloadWaiterQR()" disabled>
-                            <i class="fas fa-download"></i> Download QR
+                        <button class="btn-secondary btn-sm" onclick="openTableAssignmentsModal()">
+                            <i class="fas fa-chair"></i> Manage Table Assignments
                         </button>
                     </div>
-                    
-                    <div class="qr-url" id="qr-url-display" style="display: none;">
-                        <label>Login URL:</label>
-                        <div class="url-box">
-                            <input type="text" id="login-url" readonly>
-                            <button type="button" onclick="copyLoginUrl()" title="Copy URL">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                        </div>
+                </div>
+                <div class="waiters-list" id="waiters-list-container">
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading waiters...</p>
                     </div>
                 </div>
             </div>
-            
-            <!-- Add Waiter Form (Simplified - No Password) -->
-            <div class="form-card">
-                <h3><i class="fas fa-user-plus"></i> Add New Waiter</h3>
+        </div>
+
+        <!-- Add Waiter Modal -->
+        <div class="modal-overlay" id="add-waiter-modal" onclick="if(event.target === this) closeAddWaiterModal()">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-plus"></i> Add New Waiter</h3>
+                    <button class="modal-close" onclick="closeAddWaiterModal()">&times;</button>
+                </div>
                 <div class="info-banner">
                     <i class="fas fa-info-circle"></i>
-                    <span>Waiters login using the QR code above. They enter their <strong>Waiter ID</strong> (assigned after creation) and <strong>Name</strong> to access their dashboard.</span>
+                    <span>Waiters login using the QR code. They enter their <strong>Waiter ID</strong> (assigned after creation) and <strong>Name</strong> to access their dashboard.</span>
                 </div>
                 <div id="message" class="message"></div>
-                <form onsubmit="handleAddWaiter(event)" class="waiter-form" id="add-waiter-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="waiter-name">Waiter Name <span class="required">*</span></label>
-                            <input type="text" id="waiter-name" required placeholder="Enter waiter full name">
-                        </div>
-                        <div class="form-group">
-                            <label for="waiter-email">Email <span class="required">*</span></label>
-                            <input type="email" id="waiter-email" required placeholder="Enter email address">
-                        </div>
-                        <div class="form-group">
-                            <label for="waiter-phone">Phone Number <span class="required">*</span></label>
-                            <input type="tel" id="waiter-phone" required placeholder="Enter phone number">
-                        </div>
+                <form onsubmit="handleAddWaiter(event)" class="modal-form" id="add-waiter-form">
+                    <div class="form-group">
+                        <label for="waiter-name">Waiter Name <span class="required">*</span></label>
+                        <input type="text" id="waiter-name" required placeholder="Enter waiter full name">
+                    </div>
+                    <div class="form-group">
+                        <label for="waiter-email">Email <span class="required">*</span></label>
+                        <input type="email" id="waiter-email" required placeholder="Enter email address">
+                    </div>
+                    <div class="form-group">
+                        <label for="waiter-phone">Phone Number <span class="required">*</span></label>
+                        <input type="tel" id="waiter-phone" required placeholder="Enter phone number">
                     </div>
                     
                     <!-- Table Assignment Checkboxes -->
                     <div class="form-group table-assignment-section">
                         <label><i class="fas fa-chair"></i> Assign Tables (Optional)</label>
-                        <p class="field-hint">Select tables this waiter will be responsible for (can be shared with other waiters):</p>
+                        <p class="field-hint">Select tables this waiter will be responsible for:</p>
                         <div class="table-checkboxes" id="table-checkboxes-container">
                             <div class="empty-state small">
                                 <i class="fas fa-spinner fa-spin"></i>
@@ -965,31 +946,11 @@
                         </div>
                     </div>
                     
-                    <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Add Waiter</button>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeAddWaiterModal()">Cancel</button>
+                        <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Add Waiter</button>
+                    </div>
                 </form>
-            </div>
-
-            <!-- Waiters List -->
-            <div class="table-card">
-                <h3><i class="fas fa-list"></i> Waiters List</h3>
-                <div class="waiters-list" id="waiters-list-container">
-                    <div class="empty-state">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Loading waiters...</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Table Assignment Section -->
-            <div class="table-card">
-                <h3><i class="fas fa-chair"></i> Manage Table Assignments</h3>
-                <p class="section-desc">Assign or reassign tables to waiters. Multiple waiters can be assigned to the same table.</p>
-                <div id="table-assignments-container">
-                    <div class="empty-state">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Loading table assignments...</p>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -1765,10 +1726,113 @@
                 loadOrdersData(); // Load View Orders by default (first tab)
             } else if (sectionId === 'waiters') {
                 loadWaitersList();
-                loadTableAssignments();
-                loadTableCheckboxes();
+                // Table assignments and checkboxes loaded on-demand when user clicks buttons
+            } else if (sectionId === 'dashboard') {
+                loadRecentActivities();
             }
         }
+        
+        // =========================
+        // RECENT ACTIVITIES
+        // =========================
+        
+        function loadRecentActivities() {
+            const container = document.getElementById('recent-activities-list');
+            if (!container) return;
+            
+            container.innerHTML = `
+                <li class="activity-item loading-state">
+                    <div class="activity-icon">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+                    <div class="activity-content">
+                        <p>Loading activities...</p>
+                    </div>
+                </li>
+            `;
+            
+            fetch('/hotel-manager/api/recent-activities')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.activities && data.activities.length > 0) {
+                        container.innerHTML = data.activities.map(activity => {
+                            const { icon, bgColor, textColor, title } = getActivityStyle(activity.type);
+                            const timeAgo = formatTimeAgo(activity.created_at);
+                            return `
+                                <li class="activity-item">
+                                    <div class="activity-icon" style="background: ${bgColor}; color: ${textColor};">
+                                        <i class="fas ${icon}"></i>
+                                    </div>
+                                    <div class="activity-content">
+                                        <p><strong>${title}</strong> - ${activity.message}</p>
+                                        <span class="activity-time">${timeAgo}</span>
+                                    </div>
+                                </li>
+                            `;
+                        }).join('');
+                    } else {
+                        container.innerHTML = `
+                            <li class="activity-item empty-state">
+                                <div class="activity-icon" style="background: rgba(148, 163, 184, 0.1); color: var(--gray);">
+                                    <i class="fas fa-inbox"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <p>No recent activity</p>
+                                    <span class="activity-time">Activities will appear here as they happen</span>
+                                </div>
+                            </li>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading activities:', error);
+                    container.innerHTML = `
+                        <li class="activity-item error-state">
+                            <div class="activity-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="activity-content">
+                                <p>Failed to load activities</p>
+                                <span class="activity-time">Click refresh to try again</span>
+                            </div>
+                        </li>
+                    `;
+                });
+        }
+        
+        function getActivityStyle(type) {
+            const styles = {
+                'order': { icon: 'fa-bell', bgColor: 'rgba(16, 185, 129, 0.1)', textColor: 'var(--success)', title: 'New order' },
+                'payment': { icon: 'fa-credit-card', bgColor: 'rgba(6, 182, 212, 0.1)', textColor: 'var(--secondary)', title: 'Payment received' },
+                'verification': { icon: 'fa-user-check', bgColor: 'rgba(79, 70, 229, 0.1)', textColor: 'var(--primary)', title: 'Guest verified' },
+                'waiter': { icon: 'fa-user-tie', bgColor: 'rgba(245, 158, 11, 0.1)', textColor: 'var(--warning)', title: 'Waiter update' },
+                'table': { icon: 'fa-utensils', bgColor: 'rgba(139, 92, 246, 0.1)', textColor: '#8b5cf6', title: 'Table update' },
+                'menu': { icon: 'fa-hamburger', bgColor: 'rgba(236, 72, 153, 0.1)', textColor: '#ec4899', title: 'Menu update' }
+            };
+            return styles[type] || { icon: 'fa-info-circle', bgColor: 'rgba(148, 163, 184, 0.1)', textColor: 'var(--gray)', title: 'Activity' };
+        }
+        
+        function formatTimeAgo(dateString) {
+            if (!dateString) return 'Just now';
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+            const diffHour = Math.floor(diffMin / 60);
+            const diffDay = Math.floor(diffHour / 24);
+            
+            if (diffSec < 60) return 'Just now';
+            if (diffMin < 60) return `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`;
+            if (diffHour < 24) return `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`;
+            if (diffDay < 3) return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
+            return date.toLocaleDateString();
+        }
+        
+        // Load activities on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRecentActivities();
+        });
         
         function toggleDropdown() {
             document.getElementById('dropdownMenu').classList.toggle('show');
@@ -1815,11 +1879,14 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showMessage(`Waiter "${data.name}" created successfully! Their Waiter ID is: ${data.waiter_id}`, 'success');
-                    document.getElementById('add-waiter-form').reset();
+                    closeAddWaiterModal();
                     loadWaitersList();
-                    loadTableAssignments();
-                    loadTableCheckboxes();
+                    // Show success notification
+                    alert(`Waiter "${data.name}" created successfully!\n\nWaiter ID: ${data.waiter_id}\n\nThey can now login using the QR code with their ID and name.`);
+                    // Refresh table assignments modal if visible
+                    if (document.getElementById('waiter-feature-modal').classList.contains('show')) {
+                        loadTableAssignmentsModal();
+                    }
                 } else {
                     showMessage(data.message, 'error');
                 }
@@ -1932,13 +1999,209 @@
                         html += '</tbody></table>';
                         document.getElementById('waiters-list-container').innerHTML = html;
                     } else {
-                        document.getElementById('waiters-list-container').innerHTML = '<p class="no-data">No waiters added yet. Use the form above to add a waiter.</p>';
+                        document.getElementById('waiters-list-container').innerHTML = '<p class="no-data">No waiters added yet. Click "+ Add Waiter" to add your first waiter.</p>';
                     }
                 })
                 .catch(error => {
                     document.getElementById('waiters-list-container').innerHTML = '<p class="error">Error loading waiters</p>';
                 });
         }
+        
+        // Add Waiter Modal Functions
+        function openAddWaiterModal() {
+            document.getElementById('add-waiter-modal').classList.add('show');
+            document.body.style.overflow = 'hidden'; // Prevent background scroll
+            loadTableCheckboxes();
+        }
+        
+        function closeAddWaiterModal() {
+            document.getElementById('add-waiter-modal').classList.remove('show');
+            document.body.style.overflow = ''; // Restore background scroll
+            document.getElementById('add-waiter-form').reset();
+            document.getElementById('message').textContent = '';
+            document.getElementById('message').className = 'message';
+        }
+        
+        // Waiter Feature Modal Functions (QR Code / Table Assignments)
+        function openWaiterFeatureModal(type) {
+            const modal = document.getElementById('waiter-feature-modal');
+            const titleEl = document.getElementById('waiter-feature-modal-title');
+            const bodyEl = document.getElementById('waiter-feature-modal-body');
+            
+            if (type === 'qr') {
+                titleEl.innerHTML = '<i class="fas fa-qrcode"></i> Waiter Login QR Code';
+                bodyEl.innerHTML = `
+                    <p class="modal-desc">Generate a QR code for waiters to scan and login. Waiters will enter their ID and name to access their dashboard.</p>
+                    <div class="qr-modal-container">
+                        <div class="qr-display" id="modal-qr-display">
+                            <div class="qr-placeholder">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Generating QR code...</p>
+                            </div>
+                        </div>
+                        <div class="qr-actions">
+                            <button type="button" class="btn-secondary" id="modal-download-qr-btn" onclick="downloadWaiterQR()" disabled>
+                                <i class="fas fa-download"></i> Download QR
+                            </button>
+                        </div>
+                        <div class="qr-url" id="modal-qr-url-display" style="display: none;">
+                            <label>Login URL:</label>
+                            <div class="url-box">
+                                <input type="text" id="modal-login-url" readonly>
+                                <button type="button" onclick="copyLoginUrlModal()" title="Copy URL">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                // Auto-generate QR code when modal opens
+                generateWaiterQRModal();
+            } else if (type === 'assignments') {
+                titleEl.innerHTML = '<i class="fas fa-chair"></i> Manage Table Assignments';
+                bodyEl.innerHTML = `
+                    <p class="modal-desc">Assign or reassign tables to waiters. Multiple waiters can be assigned to the same table.</p>
+                    <div id="modal-table-assignments-container">
+                        <div class="empty-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading table assignments...</p>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" onclick="closeWaiterFeatureModal()">Close</button>
+                    </div>
+                `;
+                loadTableAssignmentsModal();
+            }
+            
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function openQRCodeModal() {
+            openWaiterFeatureModal('qr');
+        }
+        
+        function openTableAssignmentsModal() {
+            openWaiterFeatureModal('assignments');
+        }
+        
+        function closeWaiterFeatureModal() {
+            const modal = document.getElementById('waiter-feature-modal');
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+        
+        function generateWaiterQRModal() {
+            fetch('/hotel-manager/generate-waiter-qr')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const qrDisplay = document.getElementById('modal-qr-display');
+                        qrDisplay.innerHTML = `<img src="${data.qr_code}" alt="Waiter Login QR Code">`;
+                        
+                        document.getElementById('modal-login-url').value = data.login_url;
+                        document.getElementById('modal-qr-url-display').style.display = 'block';
+                        document.getElementById('modal-download-qr-btn').disabled = false;
+                    } else {
+                        showMessage(data.message || 'Failed to generate QR code', 'error');
+                    }
+                })
+                .catch(error => {
+                    showMessage('Error generating QR code', 'error');
+                });
+        }
+        
+        function copyLoginUrlModal() {
+            const urlInput = document.getElementById('modal-login-url');
+            urlInput.select();
+            document.execCommand('copy');
+            
+            const btn = urlInput.nextElementSibling;
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                btn.innerHTML = originalIcon;
+            }, 2000);
+        }
+        
+        function loadTableAssignmentsModal() {
+            Promise.all([
+                fetch('/hotel-manager/api/tables-with-assignments').then(r => r.json()),
+                fetch('/hotel-manager/api/waiters').then(r => r.json())
+            ])
+            .then(([tablesData, waitersData]) => {
+                const tables = tablesData.tables || [];
+                const waiters = waitersData.waiters || [];
+                
+                if (tables.length === 0) {
+                    document.getElementById('modal-table-assignments-container').innerHTML = '<p class="no-data">No tables found. Add tables first.</p>';
+                    return;
+                }
+                
+                let html = '<div class="assignments-grid">';
+                tables.forEach(table => {
+                    const assignedWaiterIds = table.waiter_id_list || [];
+                    
+                    html += `
+                        <div class="assignment-card">
+                            <div class="assignment-header">
+                                <i class="fas fa-utensils"></i>
+                                <span>Table ${table.table_number}</span>
+                            </div>
+                            <div class="assignment-body">
+                                <label>Assign Waiters:</label>
+                                <div class="waiter-checkboxes" id="modal-table-${table.id}-waiters">
+                                    ${waiters.length > 0 ? waiters.map(w => `
+                                        <label class="checkbox-item small">
+                                            <input type="checkbox" 
+                                                   value="${w.waiter_id}" 
+                                                   ${assignedWaiterIds.includes(w.waiter_id) ? 'checked' : ''}
+                                                   onchange="updateTableWaitersModal(${table.id})">
+                                            <span>${w.name}</span>
+                                        </label>
+                                    `).join('') : '<p class="no-data small">No waiters available</p>'}
+                                </div>
+                            </div>
+                            ${table.waiter_names ? `<div class="current-assignment"><i class="fas fa-users"></i> ${table.waiter_names}</div>` : '<div class="current-assignment muted"><i class="fas fa-user-slash"></i> No waiters assigned</div>'}
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                document.getElementById('modal-table-assignments-container').innerHTML = html;
+            })
+            .catch(error => {
+                document.getElementById('modal-table-assignments-container').innerHTML = '<p class="error">Error loading assignments</p>';
+            });
+        }
+        
+        function updateTableWaitersModal(tableId) {
+            const checkboxes = document.querySelectorAll(`#modal-table-${tableId}-waiters input[type="checkbox"]:checked`);
+            const waiterIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            
+            fetch('/hotel-manager/update-table-waiters', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({table_id: tableId, waiter_ids: waiterIds})
+            })
+            .then(response => response.json())
+            .then(data => {
+                showMessage(data.message, data.success ? 'success' : 'error');
+                if (data.success) {
+                    loadTableAssignmentsModal();
+                    loadWaitersList();
+                }
+            });
+        }
+        
+        // ESC key to close modals
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeWaiterFeatureModal();
+                closeAddWaiterModal();
+                closeEditWaiterModal();
+            }
+        });
         
         // Edit Waiter Modal Functions
         function openEditWaiterModal(waiterId) {
@@ -2047,7 +2310,10 @@
                 if (data.success) {
                     closeEditWaiterModal();
                     loadWaitersList();
-                    loadTableAssignments();
+                    // Refresh table assignments modal if open
+                    if (document.getElementById('waiter-feature-modal').classList.contains('show')) {
+                        loadTableAssignmentsModal();
+                    }
                     loadTableCheckboxes();
                 }
             });
@@ -2068,76 +2334,16 @@
             });
         }
         
+        // Alias for backwards compatibility - delegates to modal version
         function loadTableAssignments() {
-            Promise.all([
-                fetch('/hotel-manager/api/tables-with-assignments').then(r => r.json()),
-                fetch('/hotel-manager/api/waiters').then(r => r.json())
-            ])
-            .then(([tablesData, waitersData]) => {
-                const tables = tablesData.tables || [];
-                const waiters = waitersData.waiters || [];
-                
-                if (tables.length === 0) {
-                    document.getElementById('table-assignments-container').innerHTML = '<p class="no-data">No tables found. Add tables first.</p>';
-                    return;
-                }
-                
-                let html = '<div class="assignments-grid">';
-                tables.forEach(table => {
-                    // Get list of assigned waiter IDs for this table
-                    const assignedWaiterIds = table.waiter_id_list || [];
-                    
-                    html += `
-                        <div class="assignment-card">
-                            <div class="assignment-header">
-                                <i class="fas fa-utensils"></i>
-                                <span>Table ${table.table_number}</span>
-                            </div>
-                            <div class="assignment-body">
-                                <label>Assign Waiters:</label>
-                                <div class="waiter-checkboxes" id="table-${table.id}-waiters">
-                                    ${waiters.length > 0 ? waiters.map(w => `
-                                        <label class="checkbox-item small">
-                                            <input type="checkbox" 
-                                                   value="${w.waiter_id}" 
-                                                   ${assignedWaiterIds.includes(w.waiter_id) ? 'checked' : ''}
-                                                   onchange="updateTableWaiters(${table.id})">
-                                            <span>${w.name}</span>
-                                        </label>
-                                    `).join('') : '<p class="no-data small">No waiters available</p>'}
-                                </div>
-                            </div>
-                            ${table.waiter_names ? `<div class="current-assignment"><i class="fas fa-users"></i> ${table.waiter_names}</div>` : '<div class="current-assignment muted"><i class="fas fa-user-slash"></i> No waiters assigned</div>'}
-                        </div>
-                    `;
-                });
-                html += '</div>';
-                document.getElementById('table-assignments-container').innerHTML = html;
-            })
-            .catch(error => {
-                document.getElementById('table-assignments-container').innerHTML = '<p class="error">Error loading assignments</p>';
-            });
+            if (document.getElementById('waiter-feature-modal').classList.contains('show')) {
+                loadTableAssignmentsModal();
+            }
         }
         
+        // Alias for backwards compatibility - delegates to modal version
         function updateTableWaiters(tableId) {
-            // Get all checked waiters for this table
-            const checkboxes = document.querySelectorAll(`#table-${tableId}-waiters input[type="checkbox"]:checked`);
-            const waiterIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-            
-            fetch('/hotel-manager/update-table-waiters', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({table_id: tableId, waiter_ids: waiterIds})
-            })
-            .then(response => response.json())
-            .then(data => {
-                showMessage(data.message, data.success ? 'success' : 'error');
-                if (data.success) {
-                    // Reload to show updated waiter names
-                    loadTableAssignments();
-                    loadWaitersList();
-                }
-            });
+            updateTableWaitersModal(tableId);
         }
         
         function assignTableToWaiter(tableId, waiterId) {
@@ -2151,7 +2357,9 @@
                 .then(data => {
                     showMessage(data.message, data.success ? 'success' : 'error');
                     if (data.success) {
-                        loadTableAssignments();
+                        if (document.getElementById('waiter-feature-modal').classList.contains('show')) {
+                            loadTableAssignmentsModal();
+                        }
                     }
                 });
             } else {
@@ -2164,7 +2372,9 @@
                 .then(data => {
                     showMessage(data.message, data.success ? 'success' : 'error');
                     if (data.success) {
-                        loadTableAssignments();
+                        if (document.getElementById('waiter-feature-modal').classList.contains('show')) {
+                            loadTableAssignmentsModal();
+                        }
                     }
                 });
             }

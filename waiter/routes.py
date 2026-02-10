@@ -1,6 +1,7 @@
 from flask import request, jsonify, session, render_template, redirect, url_for
 from . import waiter_bp
 from .models import WaiterAuth, WaiterTableAssignment
+from orders.table_models import Table
 import json
 
 @waiter_bp.route('/login-page')
@@ -142,3 +143,18 @@ def change_password():
         data.get('new_password')
     )
     return jsonify(result)
+
+@waiter_bp.route('/api/all-tables')
+def get_all_tables():
+    """Disabled - Waiters should only see their assigned tables"""
+    return jsonify({'success': False, 'message': 'Access denied. Only managers can view all tables.'}), 403
+
+@waiter_bp.route('/api/assign-table', methods=['POST'])
+def assign_table():
+    """Disabled - Only managers can assign tables to waiters"""
+    return jsonify({'success': False, 'message': 'Access denied. Only managers can assign tables.'}), 403
+
+@waiter_bp.route('/api/unassign-table', methods=['POST'])
+def unassign_table():
+    """Disabled - Only managers can unassign tables from waiters"""
+    return jsonify({'success': False, 'message': 'Access denied. Only managers can unassign tables.'}), 403

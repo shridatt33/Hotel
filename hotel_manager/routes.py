@@ -1,13 +1,52 @@
 from flask import request, jsonify, session, render_template, send_file
 from . import hotel_manager_bp
 from .models import HotelManager, Waiter, DashboardStats, DailySpecialMenu
+from database.db import get_db_connection
 import qrcode
 import io
 import base64
 from urllib.parse import urlencode
+from datetime import datetime, timedelta
 
 # Initialize Daily Special Menu table
 DailySpecialMenu.create_table()
+
+# =========================
+# ACTIVITY LOGGING FOR MANAGERS
+# =========================
+
+def ensure_hotel_id_column():
+    """Ensure recent_activities table has hotel_id column"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SHOW COLUMNS FROM recent_activities LIKE 'hotel_id'")
+        if not cursor.fetchone():
+            cursor.execute("ALTER TABLE recent_activities ADD COLUMN hotel_id INT DEFAULT NULL")
+            cursor.execute("CREATE INDEX idx_hotel_id ON recent_activities (hotel_id)")
+            conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception:
+        pass
+
+def log_manager_activity(activity_type, message, hotel_id=None):
+    """Log activity for manager dashboard with hotel_id"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO recent_activities (activity_type, message, hotel_id) VALUES (%s, %s, %s)",
+            (activity_type, message, hotel_id)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception:
+        pass  # Fail silently to not break main operations
+
+# Ensure hotel_id column exists on module load
+ensure_hotel_id_column()
 
 @hotel_manager_bp.route('/login-page')
 def login_page():
@@ -169,6 +208,11 @@ def add_waiter():
         hotel_id,
         data.get('table_ids', [])
     )
+    
+    # Log activity on success
+    if result.get('success'):
+        log_manager_activity('waiter', f"Waiter '{data.get('name')}' was added (ID: {result.get('waiter_id')})", hotel_id)
+    
     return jsonify(result)
 
 @hotel_manager_bp.route('/delete-waiter', methods=['POST'])
@@ -179,6 +223,11 @@ def delete_waiter():
         data.get('waiter_id'),
         hotel_id
     )
+    
+    # Log activity on success
+    if result.get('success'):
+        log_manager_activity('waiter', f"Waiter (ID: {data.get('waiter_id')}) was removed", hotel_id)
+    
     return jsonify(result)
 
 @hotel_manager_bp.route('/api/waiter/<int:waiter_id>')
@@ -308,6 +357,48 @@ def get_waiters_api():
                 'assigned_tables': w['assigned_tables'] or ''
             })
     return jsonify({'success': True, 'waiters': waiters_list})
+
+@hotel_manager_bp.route('/api/recent-activities')
+def get_recent_activities():
+    """Get recent activities for the manager's hotel (last 3 days, max 10)"""
+    hotel_id = session.get('hotel_id')
+    
+    if not hotel_id:
+        return jsonify({'success': False, 'activities': [], 'message': 'Not authorized'})
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Clean old activities (older than 3 days)
+        cursor.execute("DELETE FROM recent_activities WHERE created_at < NOW() - INTERVAL 3 DAY")
+        conn.commit()
+        
+        # Fetch activities for this hotel (last 3 days, limit 10)
+        cursor.execute("""
+            SELECT activity_type, message, created_at
+            FROM recent_activities
+            WHERE hotel_id = %s AND created_at >= NOW() - INTERVAL 3 DAY
+            ORDER BY created_at DESC
+            LIMIT 10
+        """, (hotel_id,))
+        activities = cursor.fetchall()
+        
+        # Format activities for JSON response
+        formatted_activities = []
+        for act in activities:
+            formatted_activities.append({
+                'type': act['activity_type'],
+                'message': act['message'],
+                'created_at': act['created_at'].isoformat() if act['created_at'] else None
+            })
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({'success': True, 'activities': formatted_activities})
+    except Exception as e:
+        return jsonify({'success': False, 'activities': [], 'message': str(e)})
 
 @hotel_manager_bp.route('/all-managers')
 def all_managers():

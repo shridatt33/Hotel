@@ -76,13 +76,13 @@ def submit_verification(manager_id):
         )
         
         if result['success']:
-            # Log activity
+            # Log activity with hotel_id
             try:
                 conn = get_db_connection()
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT INTO recent_activities (activity_type, message) VALUES (%s, %s)",
-                    ('verification', f"Verification completed for '{guest_name}'")
+                    "INSERT INTO recent_activities (activity_type, message, hotel_id) VALUES (%s, %s, %s)",
+                    ('verification', f"Guest '{guest_name}' completed ID verification", hotel_id)
                 )
                 conn.commit()
                 cursor.close()

@@ -35,6 +35,7 @@ class Table:
                     current_session_id VARCHAR(100),
                     current_guest_name VARCHAR(255),
                     status ENUM('AVAILABLE', 'BUSY') DEFAULT 'AVAILABLE',
+                    waiter_id INT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     UNIQUE KEY unique_table_per_hotel (hotel_id, table_number)
                 )
@@ -59,6 +60,7 @@ class Table:
             ensure_column("tables", "current_session_id", "current_session_id VARCHAR(100)")
             ensure_column("tables", "current_guest_name", "current_guest_name VARCHAR(255)")
             ensure_column("tables", "hotel_id", "hotel_id INT")
+            ensure_column("tables", "waiter_id", "waiter_id INT")
             ensure_column("table_orders", "session_id", "session_id VARCHAR(100)")
             ensure_column("table_orders", "guest_name", "guest_name VARCHAR(255)")
             ensure_column("table_orders", "hotel_id", "hotel_id INT")
@@ -157,12 +159,12 @@ class Table:
     
     @staticmethod
     def get_all_tables(hotel_id=None):
-        """Get all tables for a specific hotel with active table info"""
+        """Get all tables for a specific hotel with active table info and waiter assignment"""
         try:
             connection = get_db_connection()
             cursor = connection.cursor(dictionary=True)
             
-            # Join with active_tables to get current status based on active entries
+            # Join with active_tables to get current status and waiter info
             if hotel_id:
                 cursor.execute("""
                     SELECT t.*, 
@@ -172,10 +174,12 @@ class Table:
                            at.created_at as active_since,
                            b.bill_number as active_bill_number,
                            b.total_amount as active_bill_total,
+                           w.name as waiter_name,
                            CASE WHEN at.status = 'ACTIVE' THEN 'BUSY' ELSE t.status END as derived_status
                     FROM tables t
                     LEFT JOIN active_tables at ON t.id = at.table_id AND at.status = 'ACTIVE'
                     LEFT JOIN bills b ON at.bill_id = b.id
+                    LEFT JOIN waiters w ON t.waiter_id = w.id
                     WHERE t.hotel_id = %s 
                     ORDER BY t.table_number
                 """, (hotel_id,))
@@ -188,10 +192,12 @@ class Table:
                            at.created_at as active_since,
                            b.bill_number as active_bill_number,
                            b.total_amount as active_bill_total,
+                           w.name as waiter_name,
                            CASE WHEN at.status = 'ACTIVE' THEN 'BUSY' ELSE t.status END as derived_status
                     FROM tables t
                     LEFT JOIN active_tables at ON t.id = at.table_id AND at.status = 'ACTIVE'
                     LEFT JOIN bills b ON at.bill_id = b.id
+                    LEFT JOIN waiters w ON t.waiter_id = w.id
                     ORDER BY t.table_number
                 """)
             tables = cursor.fetchall()

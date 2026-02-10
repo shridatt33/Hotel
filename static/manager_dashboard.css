@@ -485,6 +485,35 @@ body {
     color: var(--gray);
 }
 
+/* Activity Refresh Button */
+.btn-refresh-activities {
+    background: transparent;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.btn-refresh-activities:hover {
+    background: rgba(37, 99, 235, 0.1);
+    transform: rotate(180deg);
+}
+
+/* Activity Loading/Empty/Error States */
+.activity-item.loading-state,
+.activity-item.empty-state,
+.activity-item.error-state {
+    opacity: 0.7;
+}
+
+.activity-item.empty-state .activity-content p,
+.activity-item.error-state .activity-content p {
+    color: var(--gray);
+}
+
 /* ===========================================
    FORMS
    =========================================== */
@@ -1355,4 +1384,680 @@ body {
 
 .modal-form .form-group {
     margin-bottom: 1.25rem;
+}
+/* ===========================================
+   WAITERS PAGE REFACTORED STYLES
+   =========================================== */
+
+/* Page Header with Action Button */
+.waiters-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.page-header-content {
+    flex: 1;
+}
+
+.btn-add-waiter {
+    white-space: nowrap;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+}
+
+/* Card Header Row */
+.card-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.card-header-row h3 {
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Collapsible Sections */
+.collapsible-section {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.collapsible-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    margin-bottom: 1rem;
+}
+
+.collapsible-header h3 {
+    margin: 0;
+}
+
+.btn-collapse {
+    background: #f1f5f9;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--gray);
+}
+
+.btn-collapse:hover {
+    background: #e2e8f0;
+    color: var(--danger);
+}
+
+/* Add Waiter Modal */
+#add-waiter-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    padding: 1rem;
+    overflow: hidden;
+}
+
+#add-waiter-modal.show {
+    display: flex;
+}
+
+#add-waiter-modal.show ~ .main-content,
+#add-waiter-modal.show ~ body {
+    overflow: hidden;
+}
+
+#add-waiter-modal .modal-container {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    width: 90%;
+    max-width: 650px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: modalSlideIn 0.3s ease;
+    overflow: hidden;
+}
+
+#add-waiter-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    flex-shrink: 0;
+}
+
+#add-waiter-modal .modal-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+#add-waiter-modal .modal-header h3 i {
+    color: var(--primary);
+}
+
+#add-waiter-modal .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.75rem;
+    color: var(--gray);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+#add-waiter-modal .modal-close:hover {
+    color: var(--danger);
+    background: #fee2e2;
+}
+
+#add-waiter-modal .info-banner {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #93c5fd;
+    border-radius: 8px;
+    padding: 0.875rem 1rem;
+    font-size: 0.9rem;
+    margin: 1.25rem 1.5rem 0 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+#add-waiter-modal .info-banner i {
+    color: var(--primary);
+    margin-top: 2px;
+}
+
+#add-waiter-modal .modal-form {
+    padding: 1.25rem 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+#add-waiter-modal .modal-form .form-group {
+    margin-bottom: 1.25rem;
+}
+
+#add-waiter-modal .modal-form label {
+    display: block;
+    font-weight: 500;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+#add-waiter-modal .modal-form input[type="text"],
+#add-waiter-modal .modal-form input[type="email"],
+#add-waiter-modal .modal-form input[type="tel"] {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#add-waiter-modal .modal-form input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+#add-waiter-modal .table-assignment-section {
+    margin-top: 0.5rem;
+}
+
+#add-waiter-modal .table-checkboxes {
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.75rem;
+    background: #f9fafb;
+}
+
+#add-waiter-modal .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    flex-shrink: 0;
+    margin-top: 0;
+}
+
+#add-waiter-modal .modal-actions .btn-secondary {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.95rem;
+}
+
+#add-waiter-modal .modal-actions .btn-primary {
+    padding: 0.625rem 1.5rem;
+    font-size: 0.95rem;
+}
+
+#add-waiter-modal .message {
+    margin: 0.75rem 1.5rem 0 1.5rem;
+}
+
+#add-waiter-modal .message.error {
+    background: #fef2f2;
+    color: #dc2626;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #fecaca;
+}
+
+#add-waiter-modal .message.success {
+    background: #f0fdf4;
+    color: #16a34a;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #bbf7d0;
+}
+
+/* Responsive for Add Waiter Modal */
+@media (max-width: 600px) {
+    #add-waiter-modal {
+        padding: 0.5rem;
+    }
+    
+    #add-waiter-modal .modal-container {
+        width: 100%;
+        max-height: 95vh;
+        border-radius: 12px;
+    }
+    
+    #add-waiter-modal .modal-header {
+        padding: 1rem;
+    }
+    
+    #add-waiter-modal .info-banner {
+        margin: 1rem;
+    }
+    
+    #add-waiter-modal .modal-form {
+        padding: 1rem;
+    }
+    
+    #add-waiter-modal .modal-actions {
+        padding: 1rem;
+        flex-direction: column-reverse;
+    }
+    
+    #add-waiter-modal .modal-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Small button variant */
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .waiters-page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .btn-add-waiter {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .card-header-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .header-actions {
+        justify-content: stretch;
+    }
+    
+    .header-actions .btn-secondary {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+/* ===========================================
+   WAITER FEATURE MODAL (QR Code / Table Assignments)
+   =========================================== */
+
+#waiter-feature-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    padding: 1rem;
+    overflow: hidden;
+}
+
+#waiter-feature-modal.show {
+    display: flex;
+}
+
+#waiter-feature-modal .modal-container {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    width: 90%;
+    max-width: 650px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: modalSlideIn 0.3s ease;
+    overflow: hidden;
+}
+
+#waiter-feature-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    flex-shrink: 0;
+}
+
+#waiter-feature-modal .modal-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+#waiter-feature-modal .modal-header h3 i {
+    color: var(--primary);
+}
+
+#waiter-feature-modal .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.75rem;
+    color: var(--gray);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+#waiter-feature-modal .modal-close:hover {
+    color: var(--danger);
+    background: #fee2e2;
+}
+
+#waiter-feature-modal .modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+#waiter-feature-modal .modal-desc {
+    color: var(--gray);
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+#waiter-feature-modal .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    margin-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* QR Code Modal Styles */
+.qr-modal-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+#waiter-feature-modal .qr-display {
+    width: 250px;
+    height: 250px;
+    background: #f8fafc;
+    border: 2px dashed #e2e8f0;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+#waiter-feature-modal .qr-display img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 1rem;
+}
+
+#waiter-feature-modal .qr-placeholder {
+    text-align: center;
+    color: var(--gray);
+}
+
+#waiter-feature-modal .qr-placeholder i {
+    font-size: 4rem;
+    opacity: 0.3;
+    margin-bottom: 0.75rem;
+}
+
+#waiter-feature-modal .qr-placeholder p {
+    font-size: 0.9rem;
+}
+
+#waiter-feature-modal .qr-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+#waiter-feature-modal .qr-url {
+    width: 100%;
+    max-width: 400px;
+}
+
+#waiter-feature-modal .qr-url label {
+    display: block;
+    font-weight: 500;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+#waiter-feature-modal .url-box {
+    display: flex;
+    gap: 0.5rem;
+}
+
+#waiter-feature-modal .url-box input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    background: #f8fafc;
+    color: var(--dark);
+}
+
+#waiter-feature-modal .url-box button {
+    padding: 0.75rem 1rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#waiter-feature-modal .url-box button:hover {
+    background: var(--primary-dark);
+}
+
+/* Table Assignments Modal Styles */
+#waiter-feature-modal .assignments-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+#waiter-feature-modal .assignment-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+#waiter-feature-modal .assignment-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+#waiter-feature-modal .assignment-header {
+    background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+    color: white;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#waiter-feature-modal .assignment-body {
+    padding: 1rem;
+}
+
+#waiter-feature-modal .assignment-body label {
+    display: block;
+    font-weight: 500;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+#waiter-feature-modal .waiter-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+#waiter-feature-modal .checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+#waiter-feature-modal .checkbox-item:hover {
+    background: #e0e7ff;
+}
+
+#waiter-feature-modal .checkbox-item input[type="checkbox"] {
+    accent-color: var(--primary);
+    width: 16px;
+    height: 16px;
+}
+
+#waiter-feature-modal .current-assignment {
+    padding: 0.75rem 1rem;
+    background: #ecfdf5;
+    color: #059669;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+#waiter-feature-modal .current-assignment.muted {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+#waiter-feature-modal .no-data {
+    text-align: center;
+    color: var(--gray);
+    padding: 2rem;
+}
+
+#waiter-feature-modal .no-data.small {
+    padding: 0.75rem;
+    font-size: 0.85rem;
+}
+
+#waiter-feature-modal .error {
+    text-align: center;
+    color: var(--danger);
+    padding: 2rem;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    #waiter-feature-modal .modal-container {
+        width: 100%;
+        max-height: 95vh;
+        margin: 0.5rem;
+    }
+    
+    #waiter-feature-modal .modal-header {
+        padding: 1rem;
+    }
+    
+    #waiter-feature-modal .modal-body {
+        padding: 1rem;
+    }
+    
+    #waiter-feature-modal .qr-display {
+        width: 200px;
+        height: 200px;
+    }
+    
+    #waiter-feature-modal .qr-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    #waiter-feature-modal .qr-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    #waiter-feature-modal .assignments-grid {
+        grid-template-columns: 1fr;
+    }
 }

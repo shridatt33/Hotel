@@ -3,9 +3,25 @@ from flask import request, jsonify, render_template, send_file, session
 from . import orders_bp
 from .table_services import TableService, OrderService
 from .table_models import Table, TableOrder, Bill, ActiveTable
+from database.db import get_db_connection
 
 # Initialize tables
 Table.create_tables()
+
+def log_order_activity(activity_type, message, hotel_id=None):
+    """Log order-related activity"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO recent_activities (activity_type, message, hotel_id) VALUES (%s, %s, %s)",
+            (activity_type, message, hotel_id)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception:
+        pass
 
 def check_food_module():
     """Check if food module is enabled for this manager's hotel"""
@@ -37,6 +53,11 @@ def add_table():
             return jsonify({"success": False, "message": "Table number is required"})
         
         result = TableService.add_new_table(table_number, hotel_id)
+        
+        # Log activity on success
+        if result.get('success'):
+            log_order_activity('table', f"Table '{table_number}' was created", hotel_id)
+        
         return jsonify(result)
     except Exception as e:
         return jsonify({"success": False, "message": "Server error"})
@@ -114,6 +135,15 @@ def create_order():
             return jsonify({"success": False, "message": "Guest name is required"})
         
         result = OrderService.create_order(table_id, items, session_id, guest_name)
+        
+        # Log activity on success
+        if result.get('success'):
+            table = Table.get_table_by_id(table_id)
+            table_num = table['table_number'] if table else table_id
+            hotel_id = table.get('hotel_id') if table else None
+            total = sum(item.get('price', 0) * item.get('quantity', 1) for item in items)
+            log_order_activity('order', f"New order from Table {table_num} - ₹{total:.0f}", hotel_id)
+        
         return jsonify(result)
     except Exception as e:
         return jsonify({"success": False, "message": "Server error"})
@@ -238,7 +268,20 @@ def complete_bill():
         if not bill_id:
             return jsonify({"success": False, "message": "Bill ID required"})
         
+        # Get bill info before completing
+        bill_info = Bill.get_bill_details(bill_id) if hasattr(Bill, 'get_bill_details') else None
+        
         result = OrderService.complete_bill(bill_id)
+        
+        # Log activity on success
+        if result.get('success') and bill_info:
+            table_id = bill_info.get('table_id')
+            table = Table.get_table_by_id(table_id) if table_id else None
+            table_num = table['table_number'] if table else 'Unknown'
+            hotel_id = table.get('hotel_id') if table else None
+            total = bill_info.get('total_amount', 0)
+            log_order_activity('payment', f"Payment received - Table {table_num} paid ₹{total:.0f}", hotel_id)
+        
         return jsonify(result)
     except Exception as e:
         return jsonify({"success": False, "message": "Server error"})
@@ -261,10 +304,18 @@ def process_payment():
         if not open_bill:
             return jsonify({"success": False, "message": "No open bill found. Please place an order first."})
         
+        # Get table info for logging
+        table = Table.get_table_by_id(table_id)
+        table_num = table['table_number'] if table else table_id
+        hotel_id = table.get('hotel_id') if table else None
+        bill_total = open_bill.get('total_amount', 0)
+        
         # Process payment in atomic transaction
         payment_success = Bill.process_payment_atomic(table_id, open_bill['id'], payment_method)
         
         if payment_success:
+            # Log activity
+            log_order_activity('payment', f"Payment received - Table {table_num} paid ₹{bill_total:.0f}", hotel_id)
             return jsonify({
                 "success": True, 
                 "message": "Payment successful! Thank you for dining with us."
