@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="{{ url_for('static', filename='table_menu.css') }}">
 </head>
 <body>
@@ -52,11 +52,17 @@
                 <div class="cart-items-count" id="cart-items-count">0 items</div>
                 <div class="cart-total" id="cart-total">₹0.00</div>
             </div>
-            <button class="place-order-btn" onclick="placeOrder()">
-                <i class="fas fa-shopping-bag"></i>
-                <span>Place Order</span>
+            <button class="view-cart-btn" onclick="openCartReview()">
+                <i class="fas fa-shopping-cart"></i>
+                <span>View Cart</span>
             </button>
         </div>
+    </div>
+
+    <!-- View Bill Button (Floating) -->
+    <div class="view-bill-btn" id="view-bill-btn" style="display: none;" onclick="viewSessionBill()">
+        <i class="fas fa-receipt"></i>
+        <span>View Bill</span>
     </div>
 
     <!-- Order Success Modal -->
@@ -69,21 +75,540 @@
             <p>Your order is being prepared</p>
             <div class="order-id" id="modal-order-id">Order #123</div>
             <button class="btn" onclick="closeModal()">Continue Browsing</button>
+            <button class="btn btn-outline" onclick="closeModal(); viewSessionBill();">
+                <i class="fas fa-receipt"></i> View Bill
+            </button>
+        </div>
+    </div>
+
+    <!-- Bill Modal -->
+    <div class="bill-modal" id="bill-modal">
+        <div class="bill-modal-content">
+            <button class="bill-close-btn" onclick="closeBillModal()">&times;</button>
+            <div class="bill-header">
+                <div class="bill-logo">
+                    <i class="fas fa-hotel"></i>
+                </div>
+                <h2 id="bill-hotel-name">Restaurant</h2>
+                <p id="bill-hotel-address"></p>
+            </div>
+            <div class="bill-info">
+                <div class="bill-info-row">
+                    <span>Bill No:</span>
+                    <span id="bill-number">-</span>
+                </div>
+                <div class="bill-info-row">
+                    <span>Guest:</span>
+                    <span id="bill-guest-name">-</span>
+                </div>
+                <div class="bill-info-row">
+                    <span>Table:</span>
+                    <span id="bill-table-number">{{ table.table_number }}</span>
+                </div>
+                <div class="bill-info-row">
+                    <span>Date:</span>
+                    <span id="bill-date">-</span>
+                </div>
+            </div>
+            <div class="bill-items" id="bill-items">
+                <!-- Items will be populated by JavaScript -->
+            </div>
+            <div class="bill-totals">
+                <div class="bill-total-row">
+                    <span>Subtotal</span>
+                    <span id="bill-subtotal">₹0.00</span>
+                </div>
+                <div class="bill-total-row">
+                    <span>Tax (<span id="bill-tax-rate">5</span>%)</span>
+                    <span id="bill-tax">₹0.00</span>
+                </div>
+                <div class="bill-total-row grand-total">
+                    <span>Grand Total</span>
+                    <span id="bill-grand-total">₹0.00</span>
+                </div>
+            </div>
+            <div class="bill-payment-section" id="bill-payment-section">
+                <div class="payment-status" id="payment-status">
+                    <i class="fas fa-clock"></i>
+                    <span>Payment Pending</span>
+                </div>
+                <button class="pay-now-btn" id="pay-now-btn" onclick="showPaymentOptions()">
+                    <i class="fas fa-credit-card"></i>
+                    Pay Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="payment-modal" id="payment-modal">
+        <div class="payment-modal-content">
+            <button class="payment-close-btn" onclick="closePaymentModal()">&times;</button>
+            <div class="payment-header">
+                <i class="fas fa-credit-card"></i>
+                <h2>Select Payment Method</h2>
+            </div>
+            <div class="payment-amount">
+                <span>Amount to Pay</span>
+                <span class="amount" id="payment-amount">₹0.00</span>
+            </div>
+            <div class="payment-options">
+                <button class="payment-option" onclick="processPayment('CASH')">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span>Cash</span>
+                </button>
+                <button class="payment-option" onclick="processPayment('CARD')">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Card</span>
+                </button>
+                <button class="payment-option" onclick="processPayment('UPI')">
+                    <i class="fas fa-mobile-alt"></i>
+                    <span>UPI</span>
+                </button>
+            </div>
+            <p class="payment-note">Select how you'd like to pay</p>
+        </div>
+    </div>
+
+    <!-- Payment Success Modal -->
+    <div class="payment-success-modal" id="payment-success-modal">
+        <div class="payment-success-content">
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2>Payment Successful!</h2>
+            <p>Thank you for dining with us</p>
+            <p class="success-message">Your table is now available for the next guest.</p>
+            <button class="btn" onclick="closePaymentSuccess()">Done</button>
+        </div>
+    </div>
+
+    <!-- Guest Name Capture Modal -->
+    <div class="guest-name-modal" id="guest-name-modal">
+        <div class="guest-name-overlay"></div>
+        <div class="guest-name-content">
+            <div class="guest-name-header">
+                <div class="guest-name-icon">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <h2>Welcome!</h2>
+                <p>Please enter your name to continue ordering</p>
+            </div>
+            <div class="guest-name-form">
+                <div class="guest-input-wrapper">
+                    <i class="fas fa-user"></i>
+                    <input type="text" 
+                           id="guest-name-input" 
+                           placeholder="Enter your name" 
+                           autocomplete="off"
+                           maxlength="50"
+                           onkeypress="handleGuestNameKeypress(event)">
+                </div>
+                <div class="guest-name-error" id="guest-name-error" style="display: none;"></div>
+                <p class="guest-name-hint">
+                    <i class="fas fa-info-circle"></i>
+                    Your name will appear on your order and bill
+                </p>
+            </div>
+            <button class="guest-name-submit-btn" id="guest-name-submit-btn" onclick="submitGuestName()">
+                <i class="fas fa-arrow-right"></i>
+                <span>Continue to Menu</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Daily Special Popup Modal - Premium Food Poster Design -->
+    <div class="daily-special-modal" id="daily-special-modal">
+        <div class="daily-special-overlay" onclick="closeDailySpecialModal()"></div>
+        <div class="daily-special-pamphlet">
+            <button class="pamphlet-close-btn" onclick="closeDailySpecialModal()" title="Close">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <!-- Premium Poster Design - Full Image Background -->
+            <div class="pamphlet-poster">
+                <!-- Ribbon at top -->
+                <div class="pamphlet-ribbon">
+                    <span class="ribbon-text">
+                        <i class="fas fa-star"></i> TODAY'S SPECIAL <i class="fas fa-star"></i>
+                    </span>
+                </div>
+                
+                <!-- Full Hero Background Image -->
+                <div class="pamphlet-hero-bg" id="pamphlet-hero">
+                    <img id="special-popup-image" src="" alt="Today's Special">
+                    <div class="hero-overlay"></div>
+                    <div class="hero-badge">
+                        <i class="fas fa-award"></i> Chef's Pick
+                    </div>
+                </div>
+                
+                <!-- No Image Placeholder Background -->
+                <div class="pamphlet-no-image-bg" id="pamphlet-no-image" style="display: none;">
+                    <div class="no-image-pattern"></div>
+                    <div class="no-image-icon-center">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                </div>
+                
+                <!-- Content Overlay - Positioned on top of image -->
+                <div class="pamphlet-content-overlay">
+                    <div class="content-spacer"></div>
+                    
+                    <div class="pamphlet-content-box">
+                        <h2 class="pamphlet-title" id="special-popup-name"></h2>
+                        <p class="pamphlet-description" id="special-popup-description"></p>
+                        
+                        <div class="pamphlet-price-section">
+                            <div class="price-tag">
+                                <span class="price-label">Special Price</span>
+                                <span class="price-value" id="special-popup-price"></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Add to Cart Button - Clean & Slim -->
+                        <button class="pamphlet-cart-btn" id="add-special-btn" onclick="addSpecialToCart()">
+                            <i class="fas fa-cart-plus"></i>
+                            <span>Add to Cart</span>
+                        </button>
+                        
+                        <p class="pamphlet-note">
+                            <i class="fas fa-info-circle"></i>
+                            Review your cart before placing the order
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div class="pamphlet-bottom">
+                    <p><i class="fas fa-clock"></i> Limited time offer - Today only!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart Review Modal -->
+    <div class="cart-review-modal" id="cart-review-modal">
+        <div class="cart-review-overlay" onclick="closeCartReview()"></div>
+        <div class="cart-review-content">
+            <div class="cart-review-header">
+                <h3><i class="fas fa-shopping-cart"></i> Review Your Order</h3>
+                <button class="cart-review-close" onclick="closeCartReview()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="cart-review-body" id="cart-review-items">
+                <!-- Cart items will be rendered here -->
+            </div>
+            
+            <div class="cart-review-footer">
+                <div class="cart-review-total">
+                    <span>Total:</span>
+                    <span id="cart-review-total-amount">₹0.00</span>
+                </div>
+                <div class="cart-review-actions">
+                    <button class="cart-cancel-btn" onclick="closeCartReview()">
+                        <i class="fas fa-arrow-left"></i> Continue Browsing
+                    </button>
+                    <button class="cart-confirm-btn" onclick="confirmAndPlaceOrder()">
+                        <i class="fas fa-check-circle"></i> Confirm Order
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
         const tableId = {{ table.id }};
         const sessionStorageKey = `table_session_${tableId}`;
+        const guestNameStorageKey = `guest_name_${tableId}`;
         let cart = [];
         let currentOrderId = null;
         let sessionId = localStorage.getItem(sessionStorageKey);
+        let guestName = localStorage.getItem(guestNameStorageKey);
+        let currentBillTotal = 0;
         let menuData = [];
+        let viewOnlyMode = false; // Track if guest is in view-only mode
         
-        // Load menu on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            loadMenu();
-        });
+        // ALWAYS require name entry on page load (strict rule)
+        function checkGuestName() {
+            // Always show modal to verify/enter name on every QR scan
+            showGuestNameModal();
+            
+            // Pre-fill if name exists in localStorage
+            if (guestName && guestName.trim()) {
+                document.getElementById('guest-name-input').value = guestName;
+            }
+        }
+        
+        function showWelcomeBackToast() {
+            // Create a simple toast notification
+            let toast = document.getElementById('welcome-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'welcome-toast';
+                toast.className = 'welcome-toast';
+                document.body.appendChild(toast);
+            }
+            
+            toast.innerHTML = `<i class="fas fa-hand-wave"></i> Welcome back, ${guestName}!`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+        
+        function showGuestNameModal() {
+            const modal = document.getElementById('guest-name-modal');
+            modal.classList.add('show');
+            setTimeout(() => {
+                document.getElementById('guest-name-input').focus();
+            }, 300);
+        }
+        
+        function hideGuestNameModal() {
+            const modal = document.getElementById('guest-name-modal');
+            modal.classList.remove('show');
+        }
+        
+        function handleGuestNameKeypress(event) {
+            if (event.key === 'Enter') {
+                submitGuestName();
+            }
+            // Clear error state when user starts typing
+            clearGuestNameError();
+        }
+        
+        function clearGuestNameError() {
+            const input = document.getElementById('guest-name-input');
+            const errorContainer = document.getElementById('guest-name-error');
+            input.classList.remove('error');
+            if (errorContainer) {
+                errorContainer.style.display = 'none';
+            }
+        }
+        
+        function submitGuestName() {
+            const input = document.getElementById('guest-name-input');
+            const submitBtn = document.getElementById('guest-name-submit-btn');
+            const name = input.value.trim();
+            
+            // Clear any previous error
+            clearGuestNameError();
+            
+            if (!name) {
+                input.classList.add('error');
+                input.placeholder = 'Name is required!';
+                setTimeout(() => {
+                    input.classList.remove('error');
+                    input.placeholder = 'Enter your name';
+                }, 2000);
+                return;
+            }
+            
+            // Show loading state
+            const originalHTML = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+            submitBtn.disabled = true;
+            input.disabled = true;
+            
+            // Check guest access via API
+            fetch('/orders/api/check-guest-access', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    table_id: tableId,
+                    guest_name: name
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                submitBtn.innerHTML = originalHTML;
+                submitBtn.disabled = false;
+                input.disabled = false;
+                
+                if (data.can_order) {
+                    // Full access granted - can place orders
+                    viewOnlyMode = false;
+                    guestName = name;
+                    localStorage.setItem(guestNameStorageKey, guestName);
+                    
+                    if (data.is_returning_guest) {
+                        // Restore session for returning guest
+                        if (data.session_id) {
+                            sessionId = data.session_id;
+                            localStorage.setItem(sessionStorageKey, sessionId);
+                        }
+                        
+                        // Show welcome back message
+                        hideGuestNameModal();
+                        showWelcomeBackModal(data.message, data.existing_bill);
+                    } else {
+                        // New guest - proceed normally
+                        hideGuestNameModal();
+                    }
+                    
+                    // Update UI for full access
+                    updateGuestNameDisplay();
+                    checkExistingSession();
+                    enableOrderingUI();
+                } else if (data.view_only_mode) {
+                    // VIEW ONLY MODE - can see menu but cannot order
+                    viewOnlyMode = true;
+                    guestName = name;
+                    localStorage.setItem(guestNameStorageKey, guestName);
+                    
+                    hideGuestNameModal();
+                    updateGuestNameDisplay();
+                    
+                    // Enable view-only mode UI
+                    enableViewOnlyMode(data.message);
+                } else {
+                    // Access fully denied
+                    showTableBusyError(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error checking guest access:', error);
+                submitBtn.innerHTML = originalHTML;
+                submitBtn.disabled = false;
+                input.disabled = false;
+                
+                // On network error - show error, don't allow ordering
+                showTableBusyError('Unable to verify access. Please check your connection and try again.');
+            });
+        }
+        
+        function enableOrderingUI() {
+            // Remove view-only restrictions
+            viewOnlyMode = false;
+            document.body.classList.remove('view-only-mode');
+            
+            // Remove any view-only notices
+            const notice = document.querySelector('.view-only-notice');
+            if (notice) notice.remove();
+            
+            // Enable cart bar
+            const cartBar = document.getElementById('cart-bar');
+            if (cartBar) cartBar.style.display = '';
+        }
+        
+        function enableViewOnlyMode(message) {
+            viewOnlyMode = true;
+            document.body.classList.add('view-only-mode');
+            
+            // Hide cart bar in view-only mode
+            const cartBar = document.getElementById('cart-bar');
+            if (cartBar) cartBar.style.display = 'none';
+            
+            // Show view-only notice at top
+            showViewOnlyNotice(message);
+        }
+        
+        function showViewOnlyNotice(message) {
+            // Remove existing notice
+            let notice = document.querySelector('.view-only-notice');
+            if (notice) notice.remove();
+            
+            notice = document.createElement('div');
+            notice.className = 'view-only-notice';
+            notice.innerHTML = `
+                <div class="view-only-content">
+                    <i class="fas fa-eye"></i>
+                    <span>View Only Mode</span>
+                </div>
+                <p>${message || 'This table is occupied. You can browse the menu but cannot place orders.'}</p>
+            `;
+            
+            // Insert after header
+            const header = document.querySelector('.header');
+            if (header) {
+                header.after(notice);
+            } else {
+                document.body.prepend(notice);
+            }
+        }
+        
+        function showWelcomeBackModal(message, existingBill) {
+            // Create or update welcome back modal
+            let modal = document.getElementById('welcome-back-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'welcome-back-modal';
+                modal.className = 'modal-overlay';
+                document.body.appendChild(modal);
+            }
+            
+            const billInfo = existingBill ? `
+                <div class="welcome-bill-info">
+                    <p><strong>Previous Bill:</strong> #${existingBill.bill_number}</p>
+                    <p><strong>Items:</strong> ${existingBill.items_count} item(s)</p>
+                    <p><strong>Amount:</strong> ₹${parseFloat(existingBill.total_amount || 0).toFixed(2)}</p>
+                </div>
+            ` : '';
+            
+            modal.innerHTML = `
+                <div class="modal-content welcome-back-content">
+                    <div class="welcome-back-icon">
+                        <i class="fas fa-hand-wave"></i>
+                    </div>
+                    <h2>Welcome Back!</h2>
+                    <p>${message || 'Your previous order session has been restored.'}</p>
+                    ${billInfo}
+                    <button class="welcome-continue-btn" onclick="closeWelcomeBackModal()">
+                        <i class="fas fa-utensils"></i> Continue Ordering
+                    </button>
+                </div>
+            `;
+            
+            modal.classList.add('show');
+            
+            // Show view bill button since session exists
+            document.getElementById('view-bill-btn').style.display = 'flex';
+        }
+        
+        function closeWelcomeBackModal() {
+            const modal = document.getElementById('welcome-back-modal');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+        }
+        
+        function showTableBusyError(message) {
+            const input = document.getElementById('guest-name-input');
+            const errorContainer = document.getElementById('guest-name-error');
+            
+            if (errorContainer) {
+                errorContainer.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+                errorContainer.style.display = 'block';
+            } else {
+                // Create error element if doesn't exist
+                const newError = document.createElement('div');
+                newError.id = 'guest-name-error';
+                newError.className = 'guest-name-error';
+                newError.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+                input.parentElement.appendChild(newError);
+            }
+            
+            input.classList.add('error');
+        }
+        
+        function updateGuestNameDisplay() {
+            // Add guest name to header if exists
+            const tableInfo = document.querySelector('.table-info');
+            if (tableInfo && guestName) {
+                // Check if guest name badge already exists
+                let guestBadge = document.querySelector('.guest-name-badge');
+                if (!guestBadge) {
+                    guestBadge = document.createElement('div');
+                    guestBadge.className = 'guest-name-badge';
+                    tableInfo.parentElement.appendChild(guestBadge);
+                }
+                guestBadge.innerHTML = `<i class="fas fa-user"></i> ${guestName}`;
+            }
+        }
         
         function loadMenu() {
             fetch('/api/public-menu/' + tableId)
@@ -241,6 +766,18 @@
         }
         
         function addToCart(itemName, price) {
+            // Check if in view-only mode
+            if (viewOnlyMode) {
+                showViewOnlyAlert();
+                return;
+            }
+            
+            // Check if guest name is set
+            if (!guestName || !guestName.trim()) {
+                showGuestNameModal();
+                return;
+            }
+            
             const existingItem = cart.find(item => item.name === itemName);
             
             if (existingItem) {
@@ -262,7 +799,17 @@
             setTimeout(() => cartBar.classList.remove('pulse'), 500);
         }
         
+        function showViewOnlyAlert() {
+            alert('This table is currently occupied by another guest. You can view the menu but cannot place orders until the current guest completes payment.');
+        }
+        
         function updateQuantity(itemName, delta) {
+            // Check if in view-only mode
+            if (viewOnlyMode) {
+                showViewOnlyAlert();
+                return;
+            }
+            
             const item = cart.find(i => i.name === itemName);
             if (!item) return;
             
@@ -327,8 +874,20 @@
         }
         
         function placeOrder() {
+            // Check if in view-only mode
+            if (viewOnlyMode) {
+                showViewOnlyAlert();
+                return;
+            }
+            
             if (cart.length === 0) {
                 alert('Please add items to your order first!');
+                return;
+            }
+            
+            // Check if guest name is set
+            if (!guestName || !guestName.trim()) {
+                showGuestNameModal();
                 return;
             }
             
@@ -348,7 +907,8 @@
                 body: JSON.stringify({
                     table_id: tableId,
                     items: cart,
-                    session_id: sessionId
+                    session_id: sessionId,
+                    guest_name: guestName
                 })
             })
             .then(response => response.json())
@@ -361,6 +921,10 @@
                     if (data.session_id) {
                         sessionId = data.session_id;
                         localStorage.setItem(sessionStorageKey, sessionId);
+                    }
+                    if (data.guest_name) {
+                        guestName = data.guest_name;
+                        localStorage.setItem(guestNameStorageKey, guestName);
                     }
                     
                     // Show success modal
@@ -432,6 +996,481 @@
             originalRenderMenu(menu);
             setTimeout(setupScrollSpy, 100);
         };
+        
+        // ============== Bill & Payment Functions ==============
+        
+        // Check for existing session and show bill button
+        function checkExistingSession() {
+            if (sessionId) {
+                document.getElementById('view-bill-btn').style.display = 'flex';
+            }
+        }
+
+        // ============== Daily Special Popup Functions ==============
+        let dailySpecialShown = false;
+        let currentDailySpecial = null; // Store the special data for adding to cart
+
+        function loadDailySpecial() {
+            // Only show popup once per page load
+            if (dailySpecialShown) return;
+
+            fetch('/api/public-daily-special/' + tableId)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.special) {
+                        currentDailySpecial = data.special; // Store for later use
+                        showDailySpecialPopup(data.special);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading daily special:', error);
+                });
+        }
+
+        function showDailySpecialPopup(special) {
+            if (dailySpecialShown) return;
+            
+            document.getElementById('special-popup-name').textContent = special.menu_name;
+            document.getElementById('special-popup-description').textContent = special.description || 'A specially curated dish made with the finest ingredients for today!';
+            document.getElementById('special-popup-price').textContent = '₹' + parseFloat(special.price).toFixed(2);
+            
+            // Handle image display - new unified design
+            const heroSection = document.getElementById('pamphlet-hero');
+            const noImageSection = document.getElementById('pamphlet-no-image');
+            const popupImage = document.getElementById('special-popup-image');
+            
+            if (special.image_path) {
+                popupImage.src = special.image_path;
+                heroSection.style.display = 'block';
+                noImageSection.style.display = 'none';
+            } else {
+                heroSection.style.display = 'none';
+                noImageSection.style.display = 'flex';
+            }
+            
+            const modal = document.getElementById('daily-special-modal');
+            modal.classList.add('show');
+            dailySpecialShown = true;
+            
+            // Prevent body scroll when modal is open
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeDailySpecialModal() {
+            const modal = document.getElementById('daily-special-modal');
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        function addSpecialToCart() {
+            if (!currentDailySpecial) {
+                console.error('No daily special data available');
+                return;
+            }
+            
+            const specialName = currentDailySpecial.menu_name;
+            const specialPrice = parseFloat(currentDailySpecial.price);
+            
+            // Add to cart using existing addToCart logic
+            const existingItem = cart.find(item => item.name === specialName);
+            
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({
+                    name: specialName,
+                    price: specialPrice,
+                    quantity: 1
+                });
+            }
+            
+            updateCartUI();
+            
+            // Try to update dish button if it exists in menu
+            updateDishButton(specialName);
+            
+            // Pulse animation on cart
+            const cartBar = document.getElementById('cart-bar');
+            cartBar.classList.add('pulse');
+            setTimeout(() => cartBar.classList.remove('pulse'), 500);
+            
+            // Show success feedback on button
+            const addBtn = document.getElementById('add-special-btn');
+            const originalHTML = addBtn.innerHTML;
+            addBtn.innerHTML = '<i class="fas fa-check"></i> <span>Added to Cart!</span>';
+            addBtn.classList.add('added');
+            
+            // Close modal after short delay to show feedback
+            setTimeout(() => {
+                closeDailySpecialModal();
+                // Reset button state
+                addBtn.innerHTML = originalHTML;
+                addBtn.classList.remove('added');
+            }, 800);
+        }
+
+        // ============== Cart Review Functions ==============
+        function openCartReview() {
+            if (cart.length === 0) {
+                alert('Your cart is empty!');
+                return;
+            }
+            
+            renderCartReviewItems();
+            const modal = document.getElementById('cart-review-modal');
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCartReview() {
+            const modal = document.getElementById('cart-review-modal');
+            modal.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        function renderCartReviewItems() {
+            const container = document.getElementById('cart-review-items');
+            const totalEl = document.getElementById('cart-review-total-amount');
+            
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="cart-empty">
+                        <i class="fas fa-shopping-cart"></i>
+                        <p>Your cart is empty</p>
+                    </div>
+                `;
+                totalEl.textContent = '₹0.00';
+                return;
+            }
+            
+            let html = '';
+            let total = 0;
+            
+            cart.forEach((item, index) => {
+                const itemTotal = item.price * item.quantity;
+                total += itemTotal;
+                const escapedName = item.name.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+                
+                html += `
+                    <div class="cart-review-item">
+                        <div class="cart-item-info">
+                            <h4>${item.name}</h4>
+                            <p class="cart-item-price">₹${item.price.toFixed(2)} each</p>
+                        </div>
+                        <div class="cart-item-controls">
+                            <div class="cart-qty-controls">
+                                <button class="cart-qty-btn" onclick="updateCartQuantity(${index}, -1)">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <span class="cart-qty-value">${item.quantity}</span>
+                                <button class="cart-qty-btn" onclick="updateCartQuantity(${index}, 1)">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <span class="cart-item-total">₹${itemTotal.toFixed(2)}</span>
+                            <button class="cart-remove-btn" onclick="removeFromCart(${index})" title="Remove">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            totalEl.textContent = `₹${total.toFixed(2)}`;
+        }
+
+        function updateCartQuantity(index, delta) {
+            if (index < 0 || index >= cart.length) return;
+            
+            const item = cart[index];
+            item.quantity += delta;
+            
+            if (item.quantity <= 0) {
+                cart.splice(index, 1);
+            }
+            
+            updateCartUI();
+            renderCartReviewItems();
+            
+            // Update dish button in menu if applicable
+            if (item) {
+                updateDishButton(item.name);
+            }
+            
+            // Close modal if cart is empty
+            if (cart.length === 0) {
+                closeCartReview();
+            }
+        }
+
+        function removeFromCart(index) {
+            if (index < 0 || index >= cart.length) return;
+            
+            const itemName = cart[index].name;
+            cart.splice(index, 1);
+            
+            updateCartUI();
+            renderCartReviewItems();
+            updateDishButton(itemName);
+            
+            // Close modal if cart is empty
+            if (cart.length === 0) {
+                closeCartReview();
+            }
+        }
+
+        function confirmAndPlaceOrder() {
+            // Check if in view-only mode
+            if (viewOnlyMode) {
+                showViewOnlyAlert();
+                return;
+            }
+            
+            if (cart.length === 0) {
+                alert('Your cart is empty!');
+                return;
+            }
+            
+            // Check if guest name is set
+            if (!guestName || !guestName.trim()) {
+                closeCartReview();
+                showGuestNameModal();
+                return;
+            }
+            
+            // Show loading state
+            const confirmBtn = document.querySelector('.cart-confirm-btn');
+            const originalHTML = confirmBtn.innerHTML;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            confirmBtn.disabled = true;
+            
+            fetch('/orders/api/create-order', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    table_id: tableId,
+                    items: cart,
+                    session_id: sessionId,
+                    guest_name: guestName
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                confirmBtn.innerHTML = originalHTML;
+                confirmBtn.disabled = false;
+                
+                if (data.success) {
+                    currentOrderId = data.order_id;
+                    if (data.session_id) {
+                        sessionId = data.session_id;
+                        localStorage.setItem(sessionStorageKey, sessionId);
+                    }
+                    if (data.guest_name) {
+                        guestName = data.guest_name;
+                        localStorage.setItem(guestNameStorageKey, guestName);
+                    }
+                    
+                    // Close cart review modal
+                    closeCartReview();
+                    
+                    // Show success modal
+                    showOrderModal(currentOrderId);
+                    
+                    // Reset cart
+                    cart = [];
+                    updateCartUI();
+                    
+                    // Re-render menu to reset buttons
+                    renderMenu(menuData);
+                    
+                    // Show bill button
+                    document.getElementById('view-bill-btn').style.display = 'flex';
+                } else {
+                    alert('Error placing order: ' + data.message);
+                }
+            })
+            .catch(error => {
+                confirmBtn.innerHTML = originalHTML;
+                confirmBtn.disabled = false;
+                console.error('Error placing order:', error);
+                alert('Error placing order. Please try again.');
+            });
+        }
+        
+        // Call on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMenu();
+            checkExistingSession();
+            // Check if guest name is needed
+            checkGuestName();
+            // Update guest name display if exists
+            updateGuestNameDisplay();
+            // Load daily special popup after a short delay to not interfere with menu loading
+            setTimeout(loadDailySpecial, 500);
+        });
+        
+        // View Session Bill
+        function viewSessionBill() {
+            if (!sessionId) {
+                alert('No active order found');
+                return;
+            }
+            
+            fetch(`/orders/api/session-bill/${tableId}/${sessionId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.bill) {
+                        displayBill(data.bill);
+                    } else {
+                        alert('No bill found for this session');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading bill:', error);
+                    alert('Error loading bill');
+                });
+        }
+        
+        function displayBill(bill) {
+            // Update bill header
+            document.getElementById('bill-hotel-name').textContent = bill.hotel_name || 'Restaurant';
+            document.getElementById('bill-hotel-address').textContent = bill.hotel_address || '';
+            document.getElementById('bill-number').textContent = bill.order_count > 1 ? `Session (${bill.order_count} orders)` : 'Order Bill';
+            document.getElementById('bill-guest-name').textContent = bill.guest_name || guestName || 'Guest';
+            document.getElementById('bill-table-number').textContent = bill.table_number;
+            document.getElementById('bill-date').textContent = new Date(bill.created_at).toLocaleString();
+            
+            // Render items
+            const itemsContainer = document.getElementById('bill-items');
+            let itemsHTML = `
+                <div class="bill-items-header">
+                    <span>Item</span>
+                    <span>Qty</span>
+                    <span>Price</span>
+                    <span>Total</span>
+                </div>
+            `;
+            
+            bill.items.forEach(item => {
+                itemsHTML += `
+                    <div class="bill-item-row">
+                        <span class="item-name">${item.name}</span>
+                        <span class="item-qty">${item.quantity}</span>
+                        <span class="item-price">₹${parseFloat(item.price).toFixed(2)}</span>
+                        <span class="item-total">₹${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                `;
+            });
+            itemsContainer.innerHTML = itemsHTML;
+            
+            // Update totals
+            document.getElementById('bill-subtotal').textContent = `₹${parseFloat(bill.subtotal).toFixed(2)}`;
+            document.getElementById('bill-tax-rate').textContent = bill.tax_rate;
+            document.getElementById('bill-tax').textContent = `₹${parseFloat(bill.tax_amount).toFixed(2)}`;
+            document.getElementById('bill-grand-total').textContent = `₹${parseFloat(bill.total_amount).toFixed(2)}`;
+            
+            currentBillTotal = bill.total_amount;
+            
+            // Update payment status
+            const paymentStatus = document.getElementById('payment-status');
+            const payNowBtn = document.getElementById('pay-now-btn');
+            
+            if (bill.payment_status === 'PAID') {
+                paymentStatus.innerHTML = '<i class="fas fa-check-circle"></i><span>Paid</span>';
+                paymentStatus.classList.add('paid');
+                payNowBtn.style.display = 'none';
+            } else {
+                paymentStatus.innerHTML = '<i class="fas fa-clock"></i><span>Payment Pending</span>';
+                paymentStatus.classList.remove('paid');
+                payNowBtn.style.display = 'flex';
+            }
+            
+            // Show bill modal
+            document.getElementById('bill-modal').classList.add('show');
+        }
+        
+        function closeBillModal() {
+            document.getElementById('bill-modal').classList.remove('show');
+        }
+        
+        // Payment Functions
+        function showPaymentOptions() {
+            document.getElementById('payment-amount').textContent = `₹${parseFloat(currentBillTotal).toFixed(2)}`;
+            document.getElementById('payment-modal').classList.add('show');
+        }
+        
+        function closePaymentModal() {
+            document.getElementById('payment-modal').classList.remove('show');
+        }
+        
+        function processPayment(method) {
+            const payBtn = event.target.closest('.payment-option');
+            const originalHTML = payBtn.innerHTML;
+            payBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Processing...</span>';
+            payBtn.disabled = true;
+            
+            fetch('/orders/api/process-payment', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    table_id: tableId,
+                    session_id: sessionId,
+                    guest_name: guestName,
+                    payment_method: method
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                payBtn.innerHTML = originalHTML;
+                payBtn.disabled = false;
+                
+                if (data.success) {
+                    closePaymentModal();
+                    closeBillModal();
+                    showPaymentSuccess();
+                    
+                    // Clear session
+                    localStorage.removeItem(sessionStorageKey);
+                    sessionId = null;
+                    document.getElementById('view-bill-btn').style.display = 'none';
+                } else {
+                    alert('Payment failed: ' + data.message);
+                }
+            })
+            .catch(error => {
+                payBtn.innerHTML = originalHTML;
+                payBtn.disabled = false;
+                console.error('Error processing payment:', error);
+                alert('Error processing payment. Please try again.');
+            });
+        }
+        
+        function showPaymentSuccess() {
+            document.getElementById('payment-success-modal').classList.add('show');
+        }
+        
+        function closePaymentSuccess() {
+            document.getElementById('payment-success-modal').classList.remove('show');
+            // Clear session and guest name after payment completion
+            sessionId = null;
+            guestName = null;
+            localStorage.removeItem(sessionStorageKey);
+            localStorage.removeItem(guestNameStorageKey);
+            // Optionally reload page to reset state
+            location.reload();
+        }
+        
+        // Close modals on outside click
+        document.getElementById('bill-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeBillModal();
+        });
+        document.getElementById('payment-modal').addEventListener('click', function(e) {
+            if (e.target === this) closePaymentModal();
+        });
+        document.getElementById('payment-success-modal').addEventListener('click', function(e) {
+            if (e.target === this) closePaymentSuccess();
+        });
     </script>
 </body>
 </html>

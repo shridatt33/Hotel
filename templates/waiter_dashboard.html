@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waiter Dashboard - HotelEase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="stylesheet" href="{{ url_for('static', filename='waiter.css') }}">
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <i class="fas fa-hotel"></i>
+            <span>HotelEase</span>
+        </div>
+        <nav class="sidebar-menu">
+            <div class="menu-label">Main Menu</div>
+            <a href="#" class="menu-item active" onclick="showSection('dashboard')">
+                <i class="fas fa-chart-pie"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="menu-item" onclick="showSection('my-tables')">
+                <i class="fas fa-chair"></i>
+                <span>My Tables</span>
+            </a>
+            <div class="menu-divider"></div>
+            <div class="menu-label">Orders</div>
+            <a href="#" class="menu-item" onclick="showSection('active-orders')">
+                <i class="fas fa-fire"></i>
+                <span>Active Orders</span>
+                {% if active_count > 0 %}
+                <span class="menu-badge">{{ active_count }}</span>
+                {% endif %}
+            </a>
+            <a href="#" class="menu-item" onclick="showSection('preparing-orders')">
+                <i class="fas fa-clock"></i>
+                <span>Preparing</span>
+                {% if preparing_count > 0 %}
+                <span class="menu-badge warning">{{ preparing_count }}</span>
+                {% endif %}
+            </a>
+            <a href="#" class="menu-item" onclick="showSection('completed-orders')">
+                <i class="fas fa-check-circle"></i>
+                <span>Completed</span>
+            </a>
+            <div class="menu-divider"></div>
+            <div class="menu-label">Account</div>
+            <a href="#" class="menu-item" onclick="showSection('settings')">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <button class="mobile-menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1>Waiter Dashboard</h1>
+        </div>
+        <div class="header-right">
+            <div class="header-icon" onclick="refreshOrders()">
+                <i class="fas fa-sync-alt"></i>
+            </div>
+            <div class="profile-dropdown">
+                <div class="profile-btn" onclick="toggleDropdown()">
+                    <div class="profile-avatar">
+                        {{ waiter_name[:1]|upper if waiter_name else 'W' }}
+                    </div>
+                    <div class="profile-info">
+                        <div class="profile-name">{{ waiter_name }}</div>
+                        <div class="profile-role">Waiter</div>
+                    </div>
+                    <i class="fas fa-chevron-down" style="color: var(--gray); font-size: 0.8rem;"></i>
+                </div>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <a href="#" onclick="showSection('settings')"><i class="fas fa-cog"></i> Settings</a>
+                    <a href="/" class="danger" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Section -->
+        <div id="dashboard" class="content-section active">
+            <div class="page-header">
+                <h1>👋 Welcome, {{ waiter_name }}!</h1>
+                <p>{{ hotel_name }} - Here's your order overview</p>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon blue">
+                            <i class="fas fa-chair"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ tables_count }}</div>
+                    <div class="stat-label">Assigned Tables</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon red">
+                            <i class="fas fa-fire"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ active_count }}</div>
+                    <div class="stat-label">Active Orders</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon orange">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ preparing_count }}</div>
+                    <div class="stat-label">Preparing</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon green">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                    <div class="stat-value">{{ completed_count }}</div>
+                    <div class="stat-label">Completed Today</div>
+                </div>
+            </div>
+
+            <!-- Recent Orders Table -->
+            <div class="data-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-list-ul"></i> Recent Orders</h3>
+                    <button class="btn btn-secondary" onclick="refreshOrders()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="table-container" id="recentOrdersTable">
+                    <!-- Orders will be loaded via JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- My Tables Section -->
+        <div id="my-tables" class="content-section">
+            <div class="page-header">
+                <h1><i class="fas fa-chair"></i> My Assigned Tables</h1>
+                <p>Tables assigned to you by the manager</p>
+            </div>
+
+            <div class="tables-grid" id="tablesGrid">
+                {% if assigned_tables %}
+                    {% for table in assigned_tables %}
+                    <div class="table-card {{ 'busy' if table.status == 'BUSY' else 'available' }}">
+                        <div class="table-icon">
+                            <i class="fas fa-utensils"></i>
+                        </div>
+                        <div class="table-number">Table {{ table.table_number }}</div>
+                        <div class="table-status">
+                            <span class="status-badge {{ 'busy' if table.status == 'BUSY' else 'available' }}">
+                                {{ table.status }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-chair"></i>
+                        <h3>No Tables Assigned</h3>
+                        <p>Contact your manager to get tables assigned to you.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Active Orders Section -->
+        <div id="active-orders" class="content-section">
+            <div class="page-header">
+                <h1><i class="fas fa-fire"></i> Active Orders</h1>
+                <p>New orders that need attention</p>
+            </div>
+
+            <div class="orders-container" id="activeOrdersContainer">
+                <!-- Active orders will be loaded via JavaScript -->
+            </div>
+        </div>
+
+        <!-- Preparing Orders Section -->
+        <div id="preparing-orders" class="content-section">
+            <div class="page-header">
+                <h1><i class="fas fa-clock"></i> Preparing Orders</h1>
+                <p>Orders currently being prepared</p>
+            </div>
+
+            <div class="orders-container" id="preparingOrdersContainer">
+                <!-- Preparing orders will be loaded via JavaScript -->
+            </div>
+        </div>
+
+        <!-- Completed Orders Section -->
+        <div id="completed-orders" class="content-section">
+            <div class="page-header">
+                <h1><i class="fas fa-check-circle"></i> Completed Orders</h1>
+                <p>Orders that have been served</p>
+            </div>
+
+            <div class="orders-container" id="completedOrdersContainer">
+                <!-- Completed orders will be loaded via JavaScript -->
+            </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div id="settings" class="content-section">
+            <div class="page-header">
+                <h1><i class="fas fa-cog"></i> Settings</h1>
+                <p>Manage your account settings</p>
+            </div>
+
+            <div class="settings-grid">
+                <div class="data-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-key"></i> Change Password</h3>
+                    </div>
+                    <div class="card-body">
+                        <form id="changePasswordForm">
+                            <div class="form-group">
+                                <label for="currentPassword">Current Password</label>
+                                <input type="password" id="currentPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="newPassword">New Password</label>
+                                <input type="password" id="newPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="confirmPassword">Confirm New Password</label>
+                                <input type="password" id="confirmPassword" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Update Password
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="data-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-user"></i> Profile Info</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="profile-info-item">
+                            <label>Name</label>
+                            <span>{{ waiter_name }}</span>
+                        </div>
+                        <div class="profile-info-item">
+                            <label>Hotel</label>
+                            <span>{{ hotel_name }}</span>
+                        </div>
+                        <div class="profile-info-item">
+                            <label>Role</label>
+                            <span>Waiter</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Order Detail Modal -->
+    <div class="modal-overlay" id="orderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-receipt"></i> Order Details</h2>
+                <button class="modal-close" onclick="closeOrderModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="orderModalBody">
+                <!-- Order details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global Variables
+        let currentSection = 'dashboard';
+        let autoRefreshInterval = null;
+
+        // Section Navigation
+        function showSection(sectionId) {
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            document.getElementById(sectionId).classList.add('active');
+            event.target.closest('.menu-item')?.classList.add('active');
+            currentSection = sectionId;
+            
+            // Load data for specific sections
+            if (sectionId === 'active-orders') loadActiveOrders();
+            if (sectionId === 'preparing-orders') loadPreparingOrders();
+            if (sectionId === 'completed-orders') loadCompletedOrders();
+            if (sectionId === 'dashboard') loadRecentOrders();
+        }
+
+        // Sidebar Toggle
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('active');
+        }
+
+        // Dropdown Toggle
+        function toggleDropdown() {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.closest('.profile-dropdown')) {
+                document.getElementById('dropdownMenu')?.classList.remove('show');
+            }
+        }
+
+        // Logout
+        function logout() {
+            fetch('/waiter/logout')
+                .then(() => window.location.href = '/')
+                .catch(() => window.location.href = '/');
+        }
+
+        // Load Orders
+        async function loadOrders(status = null) {
+            try {
+                const url = status ? `/waiter/api/orders?status=${status}` : '/waiter/api/orders';
+                const response = await fetch(url);
+                const data = await response.json();
+                return data.success ? data.orders : [];
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                return [];
+            }
+        }
+
+        // Format order items
+        function formatOrderItems(items) {
+            if (!items || !Array.isArray(items)) return '';
+            return items.map(item => `${item.name} x${item.quantity}`).join(', ');
+        }
+
+        // Create order card HTML
+        function createOrderCard(order, showActions = true) {
+            const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+            const statusClass = order.order_status.toLowerCase();
+            const paymentClass = (order.payment_status || 'PENDING').toLowerCase();
+            
+            let actionsHtml = '';
+            if (showActions) {
+                // Add View Bill button
+                actionsHtml += `
+                    <button class="btn btn-secondary btn-sm" onclick="viewOrderBill(${order.id})" title="View Bill">
+                        <i class="fas fa-file-invoice"></i> Bill
+                    </button>
+                `;
+                
+                if (order.order_status === 'ACTIVE') {
+                    actionsHtml += `
+                        <button class="btn btn-warning btn-sm" onclick="updateOrderStatus(${order.id}, 'PREPARING')">
+                            <i class="fas fa-clock"></i> Mark Preparing
+                        </button>
+                    `;
+                } else if (order.order_status === 'PREPARING') {
+                    actionsHtml += `
+                        <button class="btn btn-success btn-sm" onclick="updateOrderStatus(${order.id}, 'COMPLETED')">
+                            <i class="fas fa-check"></i> Mark Completed
+                        </button>
+                    `;
+                }
+            }
+
+            return `
+                <div class="order-card ${statusClass}">
+                    <div class="order-header">
+                        <div class="order-table">
+                            <i class="fas fa-utensils"></i> Table ${order.table_number}
+                        </div>
+                        <div class="order-badges">
+                            <span class="order-status ${statusClass}">${order.order_status}</span>
+                            <span class="payment-status ${paymentClass}">${order.payment_status || 'PENDING'}</span>
+                        </div>
+                    </div>
+                    <div class="order-items">
+                        ${items.map(item => `
+                            <div class="order-item">
+                                <span class="item-name">${item.name}</span>
+                                <span class="item-qty">x${item.quantity}</span>
+                                <span class="item-price">₹${(item.price * item.quantity).toFixed(2)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="order-footer">
+                        <div class="order-total">
+                            <strong>Total:</strong> ₹${parseFloat(order.total_amount).toFixed(2)}
+                        </div>
+                        <div class="order-time">
+                            <i class="fas fa-clock"></i> ${new Date(order.created_at).toLocaleTimeString()}
+                        </div>
+                    </div>
+                    ${actionsHtml ? `<div class="order-actions">${actionsHtml}</div>` : ''}
+                </div>
+            `;
+        }
+
+        // View Order Bill
+        async function viewOrderBill(orderId) {
+            try {
+                const response = await fetch(`/orders/api/bill/${orderId}`);
+                const data = await response.json();
+                
+                if (data.success && data.bill) {
+                    showBillModal(data.bill);
+                } else {
+                    showNotification('Bill not found for this order', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading bill:', error);
+                showNotification('Error loading bill', 'error');
+            }
+        }
+        
+        function showBillModal(bill) {
+            const itemsHTML = bill.items.map(item => `
+                <tr>
+                    <td>${item.name}</td>
+                    <td style="text-align: center;">${item.quantity}</td>
+                    <td style="text-align: right;">₹${parseFloat(item.price).toFixed(2)}</td>
+                    <td style="text-align: right;">₹${(item.price * item.quantity).toFixed(2)}</td>
+                </tr>
+            `).join('');
+            
+            const modalHTML = `
+                <div class="bill-overlay" id="billOverlay" onclick="closeBillModal(event)">
+                    <div class="bill-container" onclick="event.stopPropagation()">
+                        <div class="bill-header">
+                            <h2><i class="fas fa-file-invoice"></i> Bill</h2>
+                            <button class="bill-close" onclick="closeBillModal()">&times;</button>
+                        </div>
+                        <div class="bill-body">
+                            <div class="bill-info">
+                                <h3>${bill.hotel_name || 'Restaurant'}</h3>
+                                <p>${bill.hotel_address || ''}</p>
+                                <div class="bill-meta">
+                                    <p><strong>Bill #:</strong> ${bill.bill_number}</p>
+                                    <p><strong>Table:</strong> ${bill.table_number}</p>
+                                    <p><strong>Date:</strong> ${new Date(bill.created_at).toLocaleString()}</p>
+                                </div>
+                            </div>
+                            <table class="bill-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th style="text-align: center;">Qty</th>
+                                        <th style="text-align: right;">Price</th>
+                                        <th style="text-align: right;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${itemsHTML}</tbody>
+                            </table>
+                            <div class="bill-totals">
+                                <div class="bill-row"><span>Subtotal</span><span>₹${parseFloat(bill.subtotal).toFixed(2)}</span></div>
+                                <div class="bill-row"><span>Tax (${bill.tax_rate}%)</span><span>₹${parseFloat(bill.tax_amount).toFixed(2)}</span></div>
+                                <div class="bill-row grand-total"><span>Grand Total</span><span>₹${parseFloat(bill.total_amount).toFixed(2)}</span></div>
+                            </div>
+                            <div class="bill-status ${bill.payment_status === 'PAID' ? 'paid' : 'pending'}">
+                                <i class="fas ${bill.payment_status === 'PAID' ? 'fa-check-circle' : 'fa-clock'}"></i>
+                                ${bill.payment_status === 'PAID' ? 'PAID' : 'Payment Pending'}
+                            </div>
+                        </div>
+                        <div class="bill-footer">
+                            <button class="btn btn-secondary" onclick="printBill()"><i class="fas fa-print"></i> Print</button>
+                            <button class="btn btn-primary" onclick="closeBillModal()">Close</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+        
+        function closeBillModal(event) {
+            if (event && event.target !== event.currentTarget) return;
+            const overlay = document.getElementById('billOverlay');
+            if (overlay) overlay.remove();
+        }
+        
+        function printBill() {
+            const billContent = document.querySelector('.bill-body').innerHTML;
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Print Bill</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; }
+                        h3 { margin: 0; text-align: center; }
+                        .bill-info { text-align: center; margin-bottom: 20px; }
+                        .bill-meta { text-align: left; margin-top: 15px; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { padding: 8px; border-bottom: 1px solid #ddd; }
+                        .bill-totals { margin-top: 15px; }
+                        .bill-row { display: flex; justify-content: space-between; padding: 5px 0; }
+                        .grand-total { font-weight: bold; border-top: 2px solid #333; margin-top: 5px; padding-top: 10px; }
+                        .bill-status { text-align: center; margin-top: 20px; padding: 10px; border-radius: 5px; }
+                        .paid { background: #d4edda; color: #155724; }
+                        .pending { background: #fff3cd; color: #856404; }
+                    </style>
+                </head>
+                <body>${billContent}</body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        // Load Recent Orders (Dashboard)
+        async function loadRecentOrders() {
+            const orders = await loadOrders();
+            const container = document.getElementById('recentOrdersTable');
+            
+            if (orders.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <h3>No Orders Yet</h3>
+                        <p>Orders from your tables will appear here.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Table</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${orders.slice(0, 10).map(order => {
+                            const items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                            return `
+                                <tr>
+                                    <td><strong>Table ${order.table_number}</strong></td>
+                                    <td>${formatOrderItems(items)}</td>
+                                    <td>₹${parseFloat(order.total_amount).toFixed(2)}</td>
+                                    <td><span class="status-badge ${order.order_status.toLowerCase()}">${order.order_status}</span></td>
+                                    <td>${new Date(order.created_at).toLocaleTimeString()}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Load Active Orders
+        async function loadActiveOrders() {
+            const orders = await loadOrders('ACTIVE');
+            const container = document.getElementById('activeOrdersContainer');
+            
+            if (orders.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-check-circle"></i>
+                        <h3>No Active Orders</h3>
+                        <p>All caught up! No new orders at the moment.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = orders.map(order => createOrderCard(order)).join('');
+        }
+
+        // Load Preparing Orders
+        async function loadPreparingOrders() {
+            const orders = await loadOrders('PREPARING');
+            const container = document.getElementById('preparingOrdersContainer');
+            
+            if (orders.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-clock"></i>
+                        <h3>No Orders Being Prepared</h3>
+                        <p>No orders are currently being prepared.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = orders.map(order => createOrderCard(order)).join('');
+        }
+
+        // Load Completed Orders
+        async function loadCompletedOrders() {
+            const orders = await loadOrders('COMPLETED');
+            const container = document.getElementById('completedOrdersContainer');
+            
+            if (orders.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-history"></i>
+                        <h3>No Completed Orders</h3>
+                        <p>Completed orders will appear here.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = orders.map(order => createOrderCard(order, false)).join('');
+        }
+
+        // Update Order Status
+        async function updateOrderStatus(orderId, newStatus) {
+            try {
+                const response = await fetch(`/waiter/api/orders/${orderId}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Order status updated!', 'success');
+                    refreshOrders();
+                } else {
+                    showNotification(data.message || 'Failed to update order', 'error');
+                }
+            } catch (error) {
+                showNotification('Error updating order status', 'error');
+            }
+        }
+
+        // Refresh Orders
+        function refreshOrders() {
+            if (currentSection === 'dashboard') loadRecentOrders();
+            if (currentSection === 'active-orders') loadActiveOrders();
+            if (currentSection === 'preparing-orders') loadPreparingOrders();
+            if (currentSection === 'completed-orders') loadCompletedOrders();
+            showNotification('Orders refreshed!', 'info');
+        }
+
+        // Show Notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+                <span>${message}</span>
+            `;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Order Modal
+        function closeOrderModal() {
+            document.getElementById('orderModal').classList.remove('show');
+        }
+
+        // Change Password
+        document.getElementById('changePasswordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                showNotification('Passwords do not match!', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/waiter/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        old_password: document.getElementById('currentPassword').value,
+                        new_password: newPassword
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Password changed successfully!', 'success');
+                    this.reset();
+                } else {
+                    showNotification(data.message || 'Failed to change password', 'error');
+                }
+            } catch (error) {
+                showNotification('Error changing password', 'error');
+            }
+        });
+
+        // Auto-refresh orders every 30 seconds
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(() => {
+                refreshOrders();
+            }, 30000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRecentOrders();
+            startAutoRefresh();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,489 @@
+from database.db import get_db_connection
+from mysql.connector import Error
+from datetime import datetime
+
+
+class HotelWallet:
+    """Hotel Wallet Management - handles balance, charges, and transactions"""
+    
+    @staticmethod
+    def create_tables():
+        """Create wallet-related tables"""
+        try:
+            connection = get_db_connection()
+            cursor = connection.cursor()
+            
+            # Create hotel_wallet table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS hotel_wallet (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    hotel_id INT NOT NULL UNIQUE,
+                    balance DECIMAL(10, 2) DEFAULT 0.00,
+                    per_verification_charge DECIMAL(10, 2) DEFAULT 0.00,
+                    per_order_charge DECIMAL(10, 2) DEFAULT 0.00,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (hotel_id) REFERENCES hotels(id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Create wallet_transactions table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS wallet_transactions (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    hotel_id INT NOT NULL,
+                    transaction_type ENUM('CREDIT', 'DEBIT') NOT NULL,
+                    amount DECIMAL(10, 2) NOT NULL,
+                    balance_after DECIMAL(10, 2) NOT NULL,
+                    description VARCHAR(500),
+                    reference_type ENUM('RECHARGE', 'VERIFICATION', 'ORDER', 'ADJUSTMENT') NOT NULL,
+                    reference_id INT,
+                    created_by_type ENUM('ADMIN', 'MANAGER', 'SYSTEM') NOT NULL,
+                    created_by_id INT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (hotel_id) REFERENCES hotels(id) ON DELETE CASCADE
+                )
+            """)
+            
+            connection.commit()
+            cursor.close()
+            connection.close()
+            print("Wallet tables created successfully")
+            return True
+        except Error as exc:
+            print(f"Error creating wallet tables: {exc}")
+            return False
+    
+    @staticmethod
+    def create_wallet(hotel_id, per_verification_charge=0.00, per_order_charge=0.00):
+        """Create a wallet for a new hotel"""
+        try:
+            connection = get_db_connection()
+            cursor = connection.cursor()
+            
+            cursor.execute("""
+                INSERT INTO hotel_wallet (hotel_id, balance, per_verification_charge, per_order_charge)
+                VALUES (%s, 0.00, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                per_verification_charge = VALUES(per_verification_charge),
+                per_order_charge = VALUES(per_order_charge)
+            """, (hotel_id, per_verification_charge, per_order_charge))
+            
+            connection.commit()
+            cursor.close()
+            connection.close()
+            return {'success': True, 'message': 'Wallet created successfully'}
+        except Error as exc:
+            print(f"Error creating wallet: {exc}")
+            return {'success': False, 'message': f'Database error: {str(exc)}'}
+    
+    @staticmethod
+    def get_wallet(hotel_id):
+        """Get wallet details for a hotel"""
+        try:
+            connection = get_db_connection()
+            cursor = connection.cursor(dictionary=True)
+            
+            cursor.execute("""
+                SELECT * FROM hotel_wallet WHERE hotel_id = %s
+            """, (hotel_id,))
+            
+            wallet = cursor.fetchone()
+            cursor.close()
+            connection.close()
+            
+            if wallet:
+                return {
+                    'id': wallet['id'],
+                    'hotel_id': wallet['hotel_id'],
+                    'balance': float(wallet['balance']),
+                    'per_verification_charge': float(wallet['per_verification_charge']),
+                    'per_order_charge': float(wallet['per_order_charge']),
+                    'created_at': wallet['created_at'],
+                    'updated_at': wallet['updated_at']
+                }
+            return None
+        except Error as exc:
+            print(f"Error getting wallet: {exc}")
+            return None
+    
+    @staticmethod
+    def get_or_create_wallet(hotel_id):
+        """Get wallet for a hotel, create if not exists (auto-create feature)"""
+        try:
+            # First try to get existing wallet
+            wallet = HotelWallet.get_wallet(hotel_id)
+            if wallet:
+                return wallet
+            
+            # Wallet doesn't exist, create it with default charges (0)
+            print(f"Auto-creating wallet for hotel_id: {hotel_id}")
+            result = HotelWallet.create_wallet(
+                hotel_id=hotel_id,
+                per_verification_charge=0.0,
+                per_order_charge=0.0
+            )
+            
+            if result.get('success'):
+                # Fetch and return the newly created wallet
+                return HotelWallet.get_wallet(hotel_id)
+            else:
+                print(f"Failed to auto-create wallet: {result.get('message')}")
+                return None
+        except Error as exc:
+            print(f"Error in get_or_create_wallet: {exc}")
+            return None
+    
+    @staticmethod
+    def get_all_wallets():
+        """Get all hotel wallets with hotel details"""
+        try:
+            connection = get_db_connection()
+            cursor = connection.cursor(dictionary=True)
+            
+            cursor.execute("""
+                SELECT 
+                    hw.*,
+                    h.hotel_name,
+                    h.city
+                FROM hotel_wallet hw
+                JOIN hotels h ON hw.hotel_id = h.id
+                ORDER BY h.hotel_name
+            """)
+            
+            wallets = cursor.fetchall()
+            cursor.close()
+            connection.close()
+            
+            result = []
+            for w in wallets:
+                result.append({
+                    'id': w['id'],
+                    'hotel_id': w['hotel_id'],
+                    'hotel_name': w['hotel_name'],
+                    'city': w['city'],
+                    'balance': float(w['balance']),
+                    'per_verification_charge': float(w['per_verification_charge']),
+                    'per_order_charge': float(w['per_order_charge']),
+                    'updated_at': w['updated_at']
+                })
+            return result
+        except Error as exc:
+            print(f"Error getting all wallets: {exc}")
+            return []
+    
+    @staticmethod
+    def add_balance(hotel_id, amount, description, created_by_type, created_by_id):
+        """Add balance to hotel wallet"""
+        try:
+            if amount <= 0:
+                return {'success': False, 'message': 'Amount must be positive'}
+            
+            # Auto-create wallet if not exists
+            wallet_check = HotelWallet.get_or_create_wallet(hotel_id)
+            if not wallet_check:
+                return {'success': False, 'message': 'Could not create or retrieve wallet'}
+            
+            connection = get_db_connection()
+            cursor = connection.cursor(dictionary=True)
+            
+            # Get current balance
+            cursor.execute("SELECT balance FROM hotel_wallet WHERE hotel_id = %s FOR UPDATE", (hotel_id,))
+            wallet = cursor.fetchone()
+            
+            if not wallet:
+                cursor.close()
+                connection.close()
+                return {'success': False, 'message': 'Wallet not found'}
+            
+            new_balance = float(wallet['balance']) + amount
+            
+            # Update balance
+            cursor.execute("""
+                UPDATE hotel_wallet SET balance = %s WHERE hotel_id = %s
+            """, (new_balance, hotel_id))
+            
+            # Record transaction
+            cursor.execute("""
+                INSERT INTO wallet_transactions 
+                (hotel_id, transaction_type, amount, balance_after, description, reference_type, created_by_type, created_by_id)
+                VALUES (%s, 'CREDIT', %s, %s, %s, 'RECHARGE', %s, %s)
+            """, (hotel_id, amount, new_balance, description, created_by_type, created_by_id))
+            
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+            return {'success': True, 'message': 'Balance added successfully', 'new_balance': new_balance}
+        except Error as exc:
+            print(f"Error adding balance: {exc}")
+            return {'success': False, 'message': f'Database error: {str(exc)}'}
+    
+    @staticmethod
+    def deduct_for_verification(hotel_id, verification_id):
+        """Deduct charge for verification - returns success/failure"""
+        try:
+            # Auto-create wallet if not exists
+            wallet_check = HotelWallet.get_or_create_wallet(hotel_id)
+            if not wallet_check:
+                return {'success': False, 'message': 'Could not create or retrieve wallet', 'insufficient_balance': False}
+            
+            connection = get_db_connection()
+            cursor = connection.cursor(dictionary=True)
+            
+            # Get wallet and charge
+            cursor.execute("""
+                SELECT balance, per_verification_charge FROM hotel_wallet WHERE hotel_id = %s FOR UPDATE
+            """, (hotel_id,))
+            wallet = cursor.fetchone()
+            
+            if not wallet:
+                cursor.close()
+                connection.close()
+                return {'success': False, 'message': 'Wallet not found', 'insufficient_balance': False}
+            
+            charge = float(wallet['per_verification_charge'])
+            current_balance = float(wallet['balance'])
+            
+            # If charge is 0, allow without deduction
+            if charge == 0:
+                cursor.close()
+                connection.close()
+                return {'success': True, 'message': 'No charge configured', 'deducted': 0}
+            
+            # Check sufficient balance
+            if current_balance < charge:
+                cursor.close()
+                connection.close()
+                return {
+                    'success': False, 
+                    'message': f'Insufficient wallet balance. Required: ₹{charge:.2f}, Available: ₹{current_balance:.2f}',
+                    'insufficient_balance': True
+                }
+            
+            new_balance = current_balance - charge
+            
+            # Update balance
+            cursor.execute("""
+                UPDATE hotel_wallet SET balance = %s WHERE hotel_id = %s
+            """, (new_balance, hotel_id))
+            
+            # Record transaction
+            cursor.execute("""
+                INSERT INTO wallet_transactions 
+                (hotel_id, transaction_type, amount, balance_after, description, reference_type, reference_id, created_by_type)
+                VALUES (%s, 'DEBIT', %s, %s, %s, 'VERIFICATION', %s, 'SYSTEM')
+            """, (hotel_id, charge, new_balance, f'Verification charge for ID #{verification_id}', verification_id))
+            
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+            return {'success': True, 'message': 'Charge deducted successfully', 'deducted': charge, 'new_balance': new_balance}
+        except Error as exc:
+            print(f"Error deducting verification charge: {exc}")
+            return {'success': False, 'message': f'Database error: {str(exc)}'}
+    
+    @staticmethod
+    def deduct_for_order(hotel_id, order_id):
+        """Deduct charge for order placement - returns success/failure"""
+        try:
+            # Auto-create wallet if not exists
+            wallet_check = HotelWallet.get_or_create_wallet(hotel_id)
+            if not wallet_check:
+                return {'success': False, 'message': 'Could not create or retrieve wallet', 'insufficient_balance': False}
+            
+            connection = get_db_connection()
+            cursor = connection.cursor(dictionary=True)
+            
+            # Get wallet and charge
+            cursor.execute("""
+                SELECT balance, per_order_charge FROM hotel_wallet WHERE hotel_id = %s FOR UPDATE
+            """, (hotel_id,))
+            wallet = cursor.fetchone()
+            
+            if not wallet:
+                cursor.close()
+                connection.close()
+                return {'success': False, 'message': 'Wallet not found', 'insufficient_balance': False}
+            
+            charge = float(wallet['per_order_charge'])
+            current_balance = float(wallet['balance'])
+            
+            # If charge is 0, allow without deduction
+            if charge == 0:
+                cursor.close()
+                connection.close()
+                return {'success': True, 'message': 'No charge configured', 'deducted': 0}
+            
+            # Check sufficient balance
+            if current_balance < charge:
+                cursor.close()
+                connection.close()
+                return {
+                    'success': False, 
+                    'message': f'Insufficient wallet balance. Required: ₹{charge:.2f}, Available: ₹{current_balance:.2f}',
+                    'insufficient_balance': True
+                }
+            
+            new_balance = current_balance - charge
+            
+            # Update balance
+            cursor.execute("""
+                UPDATE hotel_wallet SET balance = %s WHERE hotel_id = %s
+            """, (new_balance, hotel_id))
+            
+            # Record transaction
+            cursor.execute("""
+                INSERT INTO wallet_transactions 
+                (hotel_id, transaction_type, amount, balance_after, description, reference_type, reference_id, created_by_type)
+                VALUES (%s, 'DEBIT', %s, %s, %s, 'ORDER', %s, 'SYSTEM')
+            """, (hotel_id, charge, new_balance, f'Order charge for Order #{order_id}', order_id))
+            
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+            return {'success': True, 'message': 'Charge deducted successfully', 'deducted': charge, 'new_balance': new_balance}
+        except Error as exc:
+            print(f"Error deducting order charge: {exc}")
+            return {'success': False, 'message': f'Database error: {str(exc)}'}
+    
+    @staticmethod
+    def check_balance_for_verification(hotel_id):
+        """Check if hotel has sufficient balance for verification"""
+        try:
+            # Auto-create wallet if not exists
+            wallet_check = HotelWallet.get_or_create_wallet(hotel_id)
+            if not wallet_check:
+                return {'sufficient': True, 'message': 'Could not retrieve wallet, allowing operation'}
+            
+            connection = get_db_connection()
+            cursor = connection.cursor(dictionary=True)
+            
+            cursor.execute("""
+                SELECT balance, per_verification_charge FROM hotel_wallet WHERE hotel_id = %s
+            """, (hotel_id,))
+            wallet = cursor.fetchone()
+            cursor.close()
+            connection.close()
+            
+            if not wallet:
+                return {'sufficient': True, 'message': 'No wallet configured'}
+            
+            charge = float(wallet['per_verification_charge'])
+            balance = float(wallet['balance'])
+            
+            if charge == 0:
+                return {'sufficient': True, 'charge': 0, 'balance': balance}
+            
+            return {
+                'sufficient': balance >= charge,
+                'charge': charge,
+                'balance': balance,
+                'shortfall': max(0, charge - balance)
+            }
+        except Error as exc:
+            print(f"Error checking balance: {exc}")
+            return {'sufficient': True, 'message': 'Error checking balance'}
+    
+    @staticmethod
+    def check_balance_for_order(hotel_id):
+        """Check if hotel has sufficient balance for order"""
+        try:
+            # Auto-create wallet if not exists
+            wallet_check = HotelWallet.get_or_create_wallet(hotel_id)
+            if not wallet_check:
+                return {'sufficient': True, 'message': 'Could not retrieve wallet, allowing operation'}
+            
+            connection = get_db_connection()
+            cursor = connection.cursor(dictionary=True)
+            
+            cursor.execute("""
+                SELECT balance, per_order_charge FROM hotel_wallet WHERE hotel_id = %s
+            """, (hotel_id,))
+            wallet = cursor.fetchone()
+            cursor.close()
+            connection.close()
+            
+            if not wallet:
+                return {'sufficient': True, 'message': 'No wallet configured'}
+            
+            charge = float(wallet['per_order_charge'])
+            balance = float(wallet['balance'])
+            
+            if charge == 0:
+                return {'sufficient': True, 'charge': 0, 'balance': balance}
+            
+            return {
+                'sufficient': balance >= charge,
+                'charge': charge,
+                'balance': balance,
+                'shortfall': max(0, charge - balance)
+            }
+        except Error as exc:
+            print(f"Error checking balance: {exc}")
+            return {'sufficient': True, 'message': 'Error checking balance'}
+    
+    @staticmethod
+    def get_transactions(hotel_id, limit=50):
+        """Get transaction history for a hotel"""
+        try:
+            connection = get_db_connection()
+            cursor = connection.cursor(dictionary=True)
+            
+            cursor.execute("""
+                SELECT * FROM wallet_transactions 
+                WHERE hotel_id = %s 
+                ORDER BY created_at DESC 
+                LIMIT %s
+            """, (hotel_id, limit))
+            
+            transactions = cursor.fetchall()
+            cursor.close()
+            connection.close()
+            
+            result = []
+            for t in transactions:
+                result.append({
+                    'id': t['id'],
+                    'transaction_type': t['transaction_type'],
+                    'amount': float(t['amount']),
+                    'balance_after': float(t['balance_after']),
+                    'description': t['description'],
+                    'reference_type': t['reference_type'],
+                    'reference_id': t['reference_id'],
+                    'created_by_type': t['created_by_type'],
+                    'created_at': t['created_at'].strftime('%Y-%m-%d %H:%M:%S') if t['created_at'] else None
+                })
+            return result
+        except Error as exc:
+            print(f"Error getting transactions: {exc}")
+            return []
+    
+    @staticmethod
+    def update_charges(hotel_id, per_verification_charge, per_order_charge):
+        """Update hotel charges"""
+        try:
+            # Auto-create wallet if not exists
+            wallet_check = HotelWallet.get_or_create_wallet(hotel_id)
+            if not wallet_check:
+                return {'success': False, 'message': 'Could not create or retrieve wallet'}
+            
+            connection = get_db_connection()
+            cursor = connection.cursor()
+            
+            cursor.execute("""
+                UPDATE hotel_wallet 
+                SET per_verification_charge = %s, per_order_charge = %s
+                WHERE hotel_id = %s
+            """, (per_verification_charge, per_order_charge, hotel_id))
+            
+            connection.commit()
+            cursor.close()
+            connection.close()
+            
+            return {'success': True, 'message': 'Charges updated successfully'}
+        except Error as exc:
+            print(f"Error updating charges: {exc}")
+            return {'success': False, 'message': f'Database error: {str(exc)}'}

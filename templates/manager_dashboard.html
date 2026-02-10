@@ -7,9 +7,597 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='manager.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='menu_dashboard.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="stylesheet" href="{{ url_for('static', filename='manager.css') }}?v={{ range(1000, 9999) | random }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='menu_dashboard.css') }}?v={{ range(1000, 9999) | random }}">
+    <style>
+        /* Daily Special Menu Styles */
+        .daily-special-card {
+            max-width: 700px;
+        }
+        .daily-special-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .special-date-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            color: #92400e;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .special-date-badge i {
+            color: #f59e0b;
+        }
+        .current-special-card {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border: 2px solid #86efac;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+        .special-card-content {
+            display: flex;
+            gap: 1.5rem;
+            align-items: flex-start;
+        }
+        .special-image-preview {
+            flex-shrink: 0;
+            width: 120px;
+            height: 120px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .special-image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .current-special-card .special-info {
+            flex: 1;
+        }
+        .current-special-card .special-info h4 {
+            color: #166534;
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+        .current-special-card .special-info p {
+            color: #15803d;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        .current-special-card .special-price {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #059669;
+        }
+        .current-special-card .special-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(16, 185, 129, 0.2);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+        /* Image Upload Area */
+        .image-upload-area {
+            position: relative;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8fafc;
+        }
+        .image-upload-area:hover {
+            border-color: var(--primary);
+            background: #f0f9ff;
+        }
+        .image-upload-area input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        .upload-placeholder {
+            color: #64748b;
+        }
+        .upload-placeholder i {
+            font-size: 2.5rem;
+            color: #94a3b8;
+            margin-bottom: 0.75rem;
+        }
+        .upload-placeholder p {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        .upload-placeholder span {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+        .image-preview-container {
+            position: relative;
+            display: inline-block;
+        }
+        .image-preview-container img {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+        .remove-image-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #ef4444;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .remove-image-btn:hover {
+            background: #dc2626;
+        }
+        .special-info-section {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-top: 2rem;
+        }
+        .special-info-section h4 {
+            color: #475569;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+        .special-info-section ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .special-info-section li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            color: #64748b;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+        }
+        .special-info-section li i {
+            color: #10b981;
+            margin-top: 0.2rem;
+        }
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        #current-special-container h3 {
+            margin-bottom: 0.5rem;
+            color: #166534;
+        }
+        #special-form-container h3 {
+            margin-bottom: 1rem;
+            color: #334155;
+        }
+
+        /* Special Section Two-Column Layout */
+        .special-section-layout {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 2rem;
+            align-items: start;
+        }
+        @media (max-width: 1100px) {
+            .special-section-layout {
+                grid-template-columns: 1fr;
+            }
+            .pamphlet-preview-card {
+                order: -1;
+            }
+        }
+
+        /* Pamphlet Preview Card */
+        .pamphlet-preview-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+            position: sticky;
+            top: 100px;
+        }
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: white;
+        }
+        .preview-header h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .preview-badge {
+            background: rgba(255,255,255,0.15);
+            padding: 0.3rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+        .preview-container {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Mini Preview Pamphlet - Full Hero Poster Design */
+        .preview-pamphlet {
+            background: white;
+            border-radius: 14px;
+            width: 100%;
+            max-width: 260px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            position: relative;
+            min-height: 340px;
+        }
+        .preview-ribbon {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            padding: 0.4rem 0.6rem;
+            text-align: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+        }
+        .preview-ribbon span {
+            color: white;
+            font-size: 0.5rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+        }
+        .preview-ribbon i {
+            font-size: 0.45rem;
+        }
+        .preview-hero {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 55px;
+            background: #f8fafc;
+            display: none;
+        }
+        .preview-hero img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .preview-hero-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom,
+                rgba(0, 0, 0, 0.05) 0%,
+                rgba(0, 0, 0, 0.02) 30%,
+                rgba(0, 0, 0, 0.25) 60%,
+                rgba(0, 0, 0, 0.65) 85%,
+                rgba(0, 0, 0, 0.8) 100%);
+        }
+        .preview-badge-tag {
+            position: absolute;
+            top: 28px;
+            left: 6px;
+            background: rgba(255,255,255,0.95);
+            color: #ea580c;
+            padding: 0.2rem 0.4rem;
+            border-radius: 10px;
+            font-size: 0.45rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.15rem;
+            z-index: 5;
+        }
+        .preview-badge-tag i {
+            font-size: 0.45rem;
+            color: #f59e0b;
+        }
+        .preview-no-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 55px;
+            background: linear-gradient(160deg, #fef3c7 0%, #fde68a 30%, #fed7aa 60%, #fdba74 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.3rem;
+        }
+        .preview-no-image-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3);
+        }
+        .preview-no-image-icon i {
+            color: white;
+            font-size: 1rem;
+        }
+        .preview-no-image span {
+            color: #92400e;
+            font-size: 0.55rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .preview-body {
+            padding: 0.875rem 1rem;
+            text-align: center;
+        }
+        .preview-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0 0 0.35rem 0;
+            line-height: 1.3;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .preview-description {
+            font-size: 0.7rem;
+            color: #64748b;
+            line-height: 1.4;
+            margin: 0 0 0.6rem 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .preview-price-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 0.35rem 0.7rem;
+            margin-bottom: 0.6rem;
+        }
+        .preview-price-label {
+            color: #059669;
+            font-size: 0.5rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .preview-price-value {
+            color: #059669;
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+        .preview-cart-btn {
+            background: #0891b2;
+            color: white;
+            padding: 0.5rem 0.875rem;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+        }
+        .preview-cart-btn i {
+            font-size: 0.7rem;
+        }
+        .preview-note {
+            margin: 0.5rem 0 0 0;
+            color: #94a3b8;
+            font-size: 0.55rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+        }
+        .preview-note i {
+            font-size: 0.5rem;
+        }
+        .preview-footer {
+            background: #fef3c7;
+            padding: 0.4rem 0.75rem;
+            text-align: center;
+            color: #92400e;
+            font-size: 0.55rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.3rem;
+        }
+        .preview-footer i {
+            color: #f59e0b;
+        }
+        .preview-actions {
+            padding: 1rem 1.25rem;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+        }
+        .btn-download {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+        }
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+        }
+        .btn-download:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Wallet Alert Styles */
+        .wallet-alert {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border: 1px solid #86efac;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+        }
+        .wallet-alert-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .wallet-alert-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+        }
+        .wallet-alert-text {
+            flex: 1;
+            color: #166534;
+        }
+        .wallet-alert-text strong {
+            font-weight: 600;
+        }
+        .wallet-alert-link {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .wallet-alert-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        .wallet-warning {
+            color: #dc2626;
+            font-size: 0.85rem;
+            margin-left: 0.5rem;
+        }
+        .wallet-alert.low-balance {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-color: #fbbf24;
+        }
+        .wallet-alert.low-balance .wallet-alert-icon {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        .wallet-alert.low-balance .wallet-alert-text {
+            color: #92400e;
+        }
+        .wallet-alert.zero-balance {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border-color: #f87171;
+        }
+        .wallet-alert.zero-balance .wallet-alert-icon {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        .wallet-alert.zero-balance .wallet-alert-text {
+            color: #991b1b;
+        }
+        /* Transaction table styles */
+        .text-success { color: #16a34a; }
+        .text-danger { color: #dc2626; }
+        .no-data-message {
+            text-align: center;
+            padding: 2rem;
+            color: var(--gray);
+        }
+        .no-data-message i {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .loading-spinner {
+            text-align: center;
+            padding: 2rem;
+            color: var(--gray);
+        }
+    </style>
 </head>
 <body>
     <!-- Flash Messages -->
@@ -23,6 +611,56 @@
             {% endfor %}
         {% endif %}
     {% endwith %}
+
+    <!-- Edit Waiter Modal -->
+    <div class="modal-overlay" id="edit-waiter-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-edit"></i> Edit Waiter</h3>
+                <button class="modal-close" onclick="closeEditWaiterModal()">&times;</button>
+            </div>
+            <form onsubmit="handleEditWaiter(event)" class="modal-form">
+                <input type="hidden" id="edit-waiter-id">
+                
+                <div class="waiter-id-display">
+                    <label>Waiter ID:</label>
+                    <span id="edit-waiter-id-display" class="waiter-id-badge"></span>
+                    <small>This ID is used for QR-based login</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-waiter-name">Name <span class="required">*</span></label>
+                    <input type="text" id="edit-waiter-name" required placeholder="Enter waiter name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-waiter-email">Email <span class="required">*</span></label>
+                    <input type="email" id="edit-waiter-email" required placeholder="Enter email">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-waiter-phone">Phone <span class="required">*</span></label>
+                    <input type="tel" id="edit-waiter-phone" required placeholder="Enter phone number">
+                </div>
+                
+                <div class="form-group">
+                    <label><i class="fas fa-chair"></i> Assigned Tables</label>
+                    <p class="field-hint">Select tables for this waiter (can be shared with other waiters):</p>
+                    <div class="table-checkboxes" id="edit-table-checkboxes-container">
+                        <div class="empty-state small">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading tables...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeEditWaiterModal()">Cancel</button>
+                    <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Sidebar -->
     <aside class="sidebar">
@@ -51,6 +689,10 @@
                 <i class="fas fa-utensils"></i>
                 <span>Menu Management</span>
             </a>
+            <a href="#" class="menu-item" onclick="showSection('daily-special')">
+                <i class="fas fa-star"></i>
+                <span>Today's Special</span>
+            </a>
             <a href="#" class="menu-item" onclick="showSection('full-menu')">
                 <i class="fas fa-book-open"></i>
                 <span>Full Menu View</span>
@@ -66,6 +708,10 @@
             {% endif %}
             <div class="menu-divider"></div>
             <div class="menu-label">System</div>
+            <a href="#" class="menu-item" onclick="showSection('wallet')">
+                <i class="fas fa-wallet"></i>
+                <span>Wallet & Balance</span>
+            </a>
             <a href="#" class="menu-item" onclick="showSection('reports')">
                 <i class="fas fa-chart-line"></i>
                 <span>Reports</span>
@@ -122,35 +768,49 @@
                 <p>Here's what's happening with your hotel today.</p>
             </div>
 
+            <!-- Wallet Balance Alert -->
+            <div id="wallet-alert" class="wallet-alert" style="display: none;">
+                <div class="wallet-alert-content">
+                    <div class="wallet-alert-icon">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                    <div class="wallet-alert-text">
+                        <strong>Wallet Balance:</strong> <span id="dashboard-wallet-balance">₹0.00</span>
+                        <span id="wallet-warning" class="wallet-warning" style="display: none;">
+                            <i class="fas fa-exclamation-triangle"></i> Low balance - Add funds to continue operations
+                        </span>
+                    </div>
+                    <a href="#" onclick="showSection('wallet'); return false;" class="wallet-alert-link">
+                        <i class="fas fa-plus-circle"></i> Add Balance
+                    </a>
+                </div>
+            </div>
+
             <!-- Stats Cards -->
             <div class="stats-grid">
-                <div class="stat-card">
+                <div class="stat-card clickable" onclick="showSection('verification')" title="View Verification Dashboard">
                     <div class="stat-header">
                         <div class="stat-icon green">
                             <i class="fas fa-clipboard-check"></i>
                         </div>
-                        <div class="stat-change up">
-                            <i class="fas fa-arrow-up"></i> 12%
-                        </div>
                     </div>
-                    <div class="stat-value">24</div>
-                    <div class="stat-label">Today's Verification</div>
+                    <div class="stat-value">{{ stats.verifications.today if stats else 0 }}</div>
+                    <div class="stat-label">Today's Verifications</div>
+                    <div class="stat-subtitle">Total: {{ stats.verifications.total if stats else 0 }}</div>
                 </div>
 
-                <div class="stat-card">
+                <div class="stat-card clickable" onclick="showSection('table-orders'); setTimeout(() => showTableSubSection('view-orders'), 100);" title="View Orders Dashboard">
                     <div class="stat-header">
                         <div class="stat-icon purple">
                             <i class="fas fa-receipt"></i>
                         </div>
-                        <div class="stat-change up">
-                            <i class="fas fa-arrow-up"></i> 8%
-                        </div>
                     </div>
-                    <div class="stat-value">156</div>
+                    <div class="stat-value">{{ stats.orders.today if stats else 0 }}</div>
                     <div class="stat-label">Today's Orders</div>
+                    <div class="stat-subtitle">Active: {{ stats.orders.active if stats else 0 }}</div>
                 </div>
 
-                <div class="stat-card">
+                <div class="stat-card clickable" onclick="showSection('waiters')" title="View Waiters Dashboard">
                     <div class="stat-header">
                         <div class="stat-icon blue">
                             <i class="fas fa-user-tie"></i>
@@ -161,39 +821,41 @@
                     <div class="stat-subtitle">On duty today</div>
                 </div>
 
-                <div class="stat-card">
+                <div class="stat-card clickable" onclick="showSection('full-menu')" title="View Menu Dashboard">
                     <div class="stat-header">
                         <div class="stat-icon orange">
                             <i class="fas fa-hamburger"></i>
                         </div>
                     </div>
-                    <div class="stat-value">89</div>
+                    <div class="stat-value">{{ stats.menu.total_items if stats else 0 }}</div>
                     <div class="stat-label">Menu Items</div>
-                    <div class="stat-subtitle">Available today</div>
+                    <div class="stat-subtitle">{{ stats.menu.categories if stats else 0 }} categories</div>
                 </div>
 
-                <div class="stat-card">
+                <div class="stat-card clickable" onclick="showSection('reports')" title="View Revenue Reports">
                     <div class="stat-header">
                         <div class="stat-icon pink">
                             <i class="fas fa-indian-rupee-sign"></i>
                         </div>
-                        <div class="stat-change up">
-                            <i class="fas fa-arrow-up"></i> 15%
-                        </div>
                     </div>
-                    <div class="stat-value">₹24,500</div>
+                    <div class="stat-value">₹{{ "%.2f"|format(stats.revenue.today) if stats else '0.00' }}</div>
                     <div class="stat-label">Today's Revenue</div>
+                    <div class="stat-subtitle">Pending: ₹{{ "%.2f"|format(stats.revenue.pending) if stats else '0.00' }}</div>
                 </div>
 
-                <div class="stat-card">
+                <div class="stat-card clickable" onclick="showSection('table-orders'); setTimeout(() => showTableSubSection('manage-tables'), 100);" title="View Tables Dashboard">
                     <div class="stat-header">
                         <div class="stat-icon cyan">
                             <i class="fas fa-chair"></i>
                         </div>
                     </div>
-                    <div class="stat-value">12</div>
+                    <div class="stat-value">
+                        <span class="table-busy">{{ stats.tables.busy if stats else 0 }}</span>
+                        <span class="table-divider">/</span>
+                        <span class="table-available">{{ stats.tables.available if stats else 0 }}</span>
+                    </div>
                     <div class="stat-label">Active Tables</div>
-                    <div class="stat-subtitle">Currently occupied</div>
+                    <div class="stat-subtitle">Busy / Available (Total: {{ stats.tables.total if stats else 0 }})</div>
                 </div>
             </div>
 
@@ -250,28 +912,79 @@
         <div id="waiters" class="content-section">
             <div class="page-header">
                 <h1><i class="fas fa-user-tie"></i> Waiters Management</h1>
-                <p>Add, manage and track your restaurant staff</p>
+                <p>Add, manage and track your restaurant staff with QR-based login</p>
             </div>
             
-            <!-- Add Waiter Form -->
+            <!-- Waiter Login QR Code Section -->
+            <div class="form-card qr-section">
+                <h3><i class="fas fa-qrcode"></i> Waiter Login (QR Based)</h3>
+                <p class="section-desc">Generate a QR code for waiters to scan and login. Waiters will enter their ID and name to access their dashboard.</p>
+                
+                <div class="qr-container">
+                    <div class="qr-display" id="qr-display">
+                        <div class="qr-placeholder">
+                            <i class="fas fa-qrcode"></i>
+                            <p>Click the button below to generate QR code</p>
+                        </div>
+                    </div>
+                    
+                    <div class="qr-actions">
+                        <button type="button" class="btn-primary" onclick="generateWaiterQR()">
+                            <i class="fas fa-sync-alt"></i> Generate QR Code
+                        </button>
+                        <button type="button" class="btn-secondary" id="download-qr-btn" onclick="downloadWaiterQR()" disabled>
+                            <i class="fas fa-download"></i> Download QR
+                        </button>
+                    </div>
+                    
+                    <div class="qr-url" id="qr-url-display" style="display: none;">
+                        <label>Login URL:</label>
+                        <div class="url-box">
+                            <input type="text" id="login-url" readonly>
+                            <button type="button" onclick="copyLoginUrl()" title="Copy URL">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Add Waiter Form (Simplified - No Password) -->
             <div class="form-card">
                 <h3><i class="fas fa-user-plus"></i> Add New Waiter</h3>
+                <div class="info-banner">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Waiters login using the QR code above. They enter their <strong>Waiter ID</strong> (assigned after creation) and <strong>Name</strong> to access their dashboard.</span>
+                </div>
                 <div id="message" class="message"></div>
-                <form onsubmit="handleAddWaiter(event)" class="waiter-form">
+                <form onsubmit="handleAddWaiter(event)" class="waiter-form" id="add-waiter-form">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="waiter-name">Waiter Name</label>
-                            <input type="text" id="waiter-name" required placeholder="Enter waiter name">
+                            <label for="waiter-name">Waiter Name <span class="required">*</span></label>
+                            <input type="text" id="waiter-name" required placeholder="Enter waiter full name">
                         </div>
                         <div class="form-group">
-                            <label for="waiter-email">Email</label>
-                            <input type="email" id="waiter-email" required placeholder="Enter email">
+                            <label for="waiter-email">Email <span class="required">*</span></label>
+                            <input type="email" id="waiter-email" required placeholder="Enter email address">
                         </div>
                         <div class="form-group">
-                            <label for="waiter-phone">Phone Number</label>
+                            <label for="waiter-phone">Phone Number <span class="required">*</span></label>
                             <input type="tel" id="waiter-phone" required placeholder="Enter phone number">
                         </div>
                     </div>
+                    
+                    <!-- Table Assignment Checkboxes -->
+                    <div class="form-group table-assignment-section">
+                        <label><i class="fas fa-chair"></i> Assign Tables (Optional)</label>
+                        <p class="field-hint">Select tables this waiter will be responsible for (can be shared with other waiters):</p>
+                        <div class="table-checkboxes" id="table-checkboxes-container">
+                            <div class="empty-state small">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Loading tables...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <button type="submit" class="btn-primary"><i class="fas fa-plus"></i> Add Waiter</button>
                 </form>
             </div>
@@ -279,31 +992,88 @@
             <!-- Waiters List -->
             <div class="table-card">
                 <h3><i class="fas fa-list"></i> Waiters List</h3>
-                <div class="waiters-list">
-                    {{ waiters_html|safe }}
+                <div class="waiters-list" id="waiters-list-container">
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading waiters...</p>
                     </div>
                 </div>
             </div>
 
+            <!-- Table Assignment Section -->
+            <div class="table-card">
+                <h3><i class="fas fa-chair"></i> Manage Table Assignments</h3>
+                <p class="section-desc">Assign or reassign tables to waiters. Multiple waiters can be assigned to the same table.</p>
+                <div id="table-assignments-container">
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading table assignments...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
             {% if food_enabled %}
             <div id="table-orders" class="content-section">
                 <div class="page-header">
-                    <h1><i class="fas fa-qrcode"></i> Table Orders</h1>
-                    <p>Manage QR code-based table ordering system</p>
+                    <h1><i class="fas fa-qrcode"></i> Table Orders & Bills</h1>
+                    <p>Manage QR code-based table ordering and billing system</p>
                 </div>
                 
                 <!-- Sub-navigation -->
                 <div class="sub-nav">
-                    <button class="sub-nav-btn active" onclick="showTableSubSection('manage-tables')">
-                        <i class="fas fa-table-cells"></i> Manage Tables
-                    </button>
-                    <button class="sub-nav-btn" onclick="showTableSubSection('view-orders')">
+                    <button class="sub-nav-btn active" onclick="showTableSubSection('view-orders')">
                         <i class="fas fa-list-check"></i> View Orders
+                    </button>
+                    <button class="sub-nav-btn" onclick="showTableSubSection('active-bills')">
+                        <i class="fas fa-file-invoice-dollar"></i> Active Bills
+                    </button>
+                    <button class="sub-nav-btn" onclick="showTableSubSection('manage-tables')">
+                        <i class="fas fa-table-cells"></i> Manage Tables
                     </button>
                 </div>
                 
+                <!-- View Orders Sub-section -->
+                <div id="view-orders" class="sub-section active">
+                    <div class="table-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3><i class="fas fa-receipt"></i> Table Orders</h3>
+                            <button onclick="loadOrdersData()" class="btn-secondary btn-sm">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                        <div id="orders-list">
+                            <div class="empty-state">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Loading orders...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Bills Sub-section -->
+                <div id="active-bills" class="sub-section">
+                    <div class="table-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3><i class="fas fa-file-invoice-dollar"></i> Active Bills (One Per Table)</h3>
+                            <button onclick="loadActiveBills()" class="btn-secondary btn-sm">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                        <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 1rem;">
+                            <i class="fas fa-info-circle"></i> Each table has only ONE active bill until payment is completed. All orders placed during the session are merged into the same bill.
+                        </p>
+                        <div id="active-bills-list">
+                            <div class="empty-state">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Loading active bills...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Manage Tables Sub-section -->
-                <div id="manage-tables" class="sub-section active">
+                <div id="manage-tables" class="sub-section">
                     <div class="form-card">
                         <h3><i class="fas fa-plus-circle"></i> Add New Table</h3>
                         <div id="table-message" class="message"></div>
@@ -328,18 +1098,6 @@
                     </div>
                 </div>
                 
-                <!-- View Orders Sub-section -->
-                <div id="view-orders" class="sub-section">
-                    <div class="table-card">
-                        <h3><i class="fas fa-receipt"></i> Table Orders</h3>
-                        <div id="orders-list">
-                            <div class="empty-state">
-                                <i class="fas fa-spinner fa-spin"></i>
-                                <p>Loading orders...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
             {% endif %}
 
@@ -495,6 +1253,179 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Daily Special Menu Section -->
+            <div id="daily-special" class="content-section">
+                <div class="page-header">
+                    <h1><i class="fas fa-star"></i> Today's Special Menu</h1>
+                    <p>Set and manage today's special dish for your guests. This will be shown as a popup when guests scan the table QR code.</p>
+                </div>
+
+                <div class="special-section-layout">
+                    <!-- Left Column - Form -->
+                    <div class="form-card daily-special-card">
+                        <div class="daily-special-header">
+                            <div class="special-date-badge">
+                                <i class="fas fa-calendar-day"></i>
+                                <span id="special-today-date"></span>
+                            </div>
+                        </div>
+
+                        <!-- Current Special Display -->
+                        <div id="current-special-container" style="display: none;">
+                            <h3><i class="fas fa-check-circle" style="color: #10b981;"></i> Current Special Menu</h3>
+                            <div class="current-special-card">
+                                <div class="special-card-content">
+                                    <div class="special-image-preview" id="display-special-image-container" style="display: none;">
+                                        <img id="display-special-image" src="" alt="Special Menu">
+                                    </div>
+                                    <div class="special-info">
+                                        <h4 id="display-special-name"></h4>
+                                        <p id="display-special-description"></p>
+                                        <div class="special-price">
+                                            <span id="display-special-price"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="special-actions">
+                                    <button type="button" class="btn-secondary" onclick="editDailySpecial()">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button type="button" class="btn-danger" onclick="deleteDailySpecial()">
+                                        <i class="fas fa-trash"></i> Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Add/Edit Special Form -->
+                        <div id="special-form-container">
+                            <h3 id="special-form-title"><i class="fas fa-plus-circle"></i> Add Today's Special</h3>
+                            <div id="special-message" class="message"></div>
+                            <form id="daily-special-form" onsubmit="handleDailySpecialSubmit(event)" enctype="multipart/form-data">
+                                <div class="form-group">
+                                    <label for="special-name">Special Menu Name <span class="required">*</span></label>
+                                    <input type="text" id="special-name" required placeholder="e.g., Chef's Special Biryani" oninput="updatePamphletPreview()">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="special-description">Description</label>
+                                    <textarea id="special-description" rows="3" placeholder="What makes this dish special? (e.g., Made with premium basmati rice and hand-picked spices...)" oninput="updatePamphletPreview()"></textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="special-price">Price (₹) <span class="required">*</span></label>
+                                    <input type="number" id="special-price" step="0.01" min="0.01" required placeholder="Enter price" oninput="updatePamphletPreview()">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="special-image"><i class="fas fa-image"></i> Food Image (Optional)</label>
+                                    <div class="image-upload-area" id="special-image-upload-area">
+                                        <input type="file" id="special-image" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif" onchange="previewSpecialImage(this)">
+                                        <div class="upload-placeholder" id="upload-placeholder">
+                                            <i class="fas fa-cloud-upload-alt"></i>
+                                            <p>Click to upload or drag & drop</p>
+                                            <span>PNG, JPG, WEBP (Max 5MB)</span>
+                                        </div>
+                                        <div class="image-preview-container" id="special-image-preview" style="display: none;">
+                                            <img id="preview-img" src="" alt="Preview">
+                                            <button type="button" class="remove-image-btn" onclick="removeSpecialImage()">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button type="submit" class="btn-primary" id="special-submit-btn">
+                                        <i class="fas fa-save"></i> Save Today's Special
+                                    </button>
+                                    <button type="button" class="btn-secondary" id="special-cancel-btn" onclick="cancelEditSpecial()" style="display: none;">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Info Section -->
+                        <div class="special-info-section">
+                            <h4><i class="fas fa-info-circle"></i> How it works</h4>
+                            <ul>
+                                <li><i class="fas fa-check"></i> The special menu will automatically be shown to guests when they scan the table QR code</li>
+                                <li><i class="fas fa-check"></i> It appears as an attractive pamphlet-style popup with your food image</li>
+                                <li><i class="fas fa-check"></i> The special is only valid for today and will reset at midnight</li>
+                                <li><i class="fas fa-check"></i> You can change the special anytime during the day</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Right Column - Live Preview -->
+                    <div class="pamphlet-preview-card">
+                        <div class="preview-header">
+                            <h3><i class="fas fa-eye"></i> Live Preview</h3>
+                            <span class="preview-badge">As seen by guests</span>
+                        </div>
+                        
+                        <div class="preview-container" id="pamphlet-preview-container">
+                            <!-- Mini Pamphlet Preview -->
+                            <div class="preview-pamphlet" id="preview-pamphlet">
+                                <!-- Ribbon -->
+                                <div class="preview-ribbon">
+                                    <span><i class="fas fa-star"></i> TODAY'S SPECIAL <i class="fas fa-star"></i></span>
+                                </div>
+                                
+                                <!-- Image Section -->
+                                <div class="preview-hero" id="preview-hero-section">
+                                    <img id="preview-hero-img" src="" alt="Food Image">
+                                    <div class="preview-hero-gradient"></div>
+                                    <div class="preview-badge-tag">
+                                        <i class="fas fa-award"></i> Chef's Pick
+                                    </div>
+                                </div>
+                                
+                                <!-- No Image Placeholder -->
+                                <div class="preview-no-image" id="preview-no-image-section">
+                                    <div class="preview-no-image-icon">
+                                        <i class="fas fa-utensils"></i>
+                                    </div>
+                                    <span>Chef's Special</span>
+                                </div>
+                                
+                                <!-- Content -->
+                                <div class="preview-body">
+                                    <h4 class="preview-title" id="preview-title">Menu Name</h4>
+                                    <p class="preview-description" id="preview-description">Description will appear here...</p>
+                                    
+                                    <div class="preview-price-tag">
+                                        <span class="preview-price-label">Special Price</span>
+                                        <span class="preview-price-value" id="preview-price">₹0.00</span>
+                                    </div>
+                                    
+                                    <div class="preview-cart-btn">
+                                        <i class="fas fa-cart-plus"></i> Add to Cart
+                                    </div>
+                                    
+                                    <p class="preview-note">
+                                        <i class="fas fa-info-circle"></i> Review your cart before placing the order
+                                    </p>
+                                </div>
+                                
+                                <!-- Footer -->
+                                <div class="preview-footer">
+                                    <i class="fas fa-clock"></i> Limited time - Today only!
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Download Button -->
+                        <div class="preview-actions">
+                            <button type="button" class="btn-download" id="download-pamphlet-btn" onclick="downloadPamphlet()">
+                                <i class="fas fa-download"></i> Download Pamphlet
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             {% endif %}
 
             {% if kyc_enabled %}
@@ -551,6 +1482,86 @@
                     <i class="fas fa-chart-pie"></i>
                     <h3>Reports & Analytics</h3>
                     <p>Advanced analytics and reporting coming soon...</p>
+                </div>
+            </div>
+
+            <!-- Wallet & Balance Section -->
+            <div id="wallet" class="content-section">
+                <div class="page-header">
+                    <h1><i class="fas fa-wallet"></i> Wallet & Balance</h1>
+                    <p>Manage your hotel wallet balance and view transaction history</p>
+                </div>
+
+                <!-- Wallet Overview Cards -->
+                <div class="stats-grid" style="margin-bottom: 2rem;">
+                    <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669); color: white;">
+                        <div class="stat-header">
+                            <div class="stat-icon" style="background: rgba(255,255,255,0.2);">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="wallet-balance-display">₹0.00</div>
+                        <div class="stat-label" style="color: rgba(255,255,255,0.9);">Available Balance</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon purple">
+                                <i class="fas fa-id-card"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="verification-charge-display">₹0.00</div>
+                        <div class="stat-label">Per Verification Charge</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon orange">
+                                <i class="fas fa-utensils"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value" id="order-charge-display">₹0.00</div>
+                        <div class="stat-label">Per Order Charge</div>
+                    </div>
+                </div>
+
+                <!-- Add Balance Section -->
+                <div class="card" style="margin-bottom: 2rem;">
+                    <div class="card-header">
+                        <h3><i class="fas fa-plus-circle"></i> Add Balance</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 2fr auto; gap: 1rem; align-items: end;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="manager-add-amount">Amount (₹)</label>
+                                <input type="number" id="manager-add-amount" min="1" step="0.01" placeholder="Enter amount">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="manager-add-description">Description (Optional)</label>
+                                <input type="text" id="manager-add-description" placeholder="e.g., Monthly recharge">
+                            </div>
+                            <button class="btn btn-success" onclick="managerAddBalance()">
+                                <i class="fas fa-plus"></i> Add Balance
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transaction History -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-history"></i> Transaction History</h3>
+                        <button class="btn btn-secondary btn-sm" onclick="loadWalletTransactions()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="transactions-container">
+                            <div class="loading-spinner">
+                                <i class="fas fa-spinner fa-spin"></i> Loading transactions...
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -771,7 +1782,11 @@
             } else if (sectionId === 'full-menu') {
                 loadFullMenuSection();
             } else if (sectionId === 'table-orders') {
-                loadTablesData();
+                loadOrdersData(); // Load View Orders by default (first tab)
+            } else if (sectionId === 'waiters') {
+                loadWaitersList();
+                loadTableAssignments();
+                loadTableCheckboxes();
             }
         }
         
@@ -793,23 +1808,386 @@
         
         function handleAddWaiter(event) {
             event.preventDefault();
-            const name = document.getElementById('waiter-name').value;
-            const email = document.getElementById('waiter-email').value;
-            const phone = document.getElementById('waiter-phone').value;
+            const name = document.getElementById('waiter-name').value.trim();
+            const email = document.getElementById('waiter-email').value.trim();
+            const phone = document.getElementById('waiter-phone').value.trim();
+            
+            // Validate required fields
+            if (!name || !email || !phone) {
+                showMessage('Please fill in all required fields!', 'error');
+                return;
+            }
+            
+            // Get selected table IDs from checkboxes
+            const tableCheckboxes = document.querySelectorAll('#table-checkboxes-container input[type="checkbox"]:checked');
+            const tableIds = Array.from(tableCheckboxes).map(cb => parseInt(cb.value));
             
             fetch('/hotel-manager/add-waiter', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name, email, phone, manager_id: managerId})
+                body: JSON.stringify({
+                    name, 
+                    email, 
+                    phone, 
+                    table_ids: tableIds
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage(`Waiter "${data.name}" created successfully! Their Waiter ID is: ${data.waiter_id}`, 'success');
+                    document.getElementById('add-waiter-form').reset();
+                    loadWaitersList();
+                    loadTableAssignments();
+                    loadTableCheckboxes();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            });
+        }
+        
+        // QR Code Functions
+        function generateWaiterQR() {
+            fetch('/hotel-manager/generate-waiter-qr')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const qrDisplay = document.getElementById('qr-display');
+                        qrDisplay.innerHTML = `<img src="${data.qr_code}" alt="Waiter Login QR Code">`;
+                        
+                        document.getElementById('login-url').value = data.login_url;
+                        document.getElementById('qr-url-display').style.display = 'block';
+                        document.getElementById('download-qr-btn').disabled = false;
+                    } else {
+                        showMessage(data.message || 'Failed to generate QR code', 'error');
+                    }
+                })
+                .catch(error => {
+                    showMessage('Error generating QR code', 'error');
+                });
+        }
+        
+        function downloadWaiterQR() {
+            window.location.href = '/hotel-manager/download-waiter-qr';
+        }
+        
+        function copyLoginUrl() {
+            const urlInput = document.getElementById('login-url');
+            urlInput.select();
+            document.execCommand('copy');
+            
+            // Show feedback
+            const btn = urlInput.nextElementSibling;
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                btn.innerHTML = originalIcon;
+            }, 2000);
+        }
+        
+        function loadTableCheckboxes() {
+            fetch('/hotel-manager/api/tables-with-assignments')
+                .then(response => response.json())
+                .then(data => {
+                    const tables = data.tables || [];
+                    const container = document.getElementById('table-checkboxes-container');
+                    
+                    if (tables.length === 0) {
+                        container.innerHTML = '<p class="no-data small">No tables found. Add tables in Table Orders section first.</p>';
+                        return;
+                    }
+                    
+                    // Group by table - show all tables (many-to-many, so no disabled state)
+                    let html = '<div class="checkbox-grid">';
+                    tables.forEach(table => {
+                        const assignedTo = table.waiter_names ? ` (${table.waiter_names})` : '';
+                        html += `
+                            <label class="checkbox-item">
+                                <input type="checkbox" value="${table.id}">
+                                <span class="checkbox-label">
+                                    <i class="fas fa-utensils"></i> Table ${table.table_number}
+                                    ${assignedTo ? `<small class="assigned-text">${assignedTo}</small>` : ''}
+                                </span>
+                            </label>
+                        `;
+                    });
+                    html += '</div>';
+                    container.innerHTML = html;
+                })
+                .catch(error => {
+                    document.getElementById('table-checkboxes-container').innerHTML = '<p class="error small">Error loading tables</p>';
+                });
+        }
+        
+        function loadWaitersList() {
+            fetch('/hotel-manager/api/waiters')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.waiters.length > 0) {
+                        let html = '<table class="waiters-table"><thead><tr><th>WAITER ID</th><th>NAME</th><th>EMAIL</th><th>PHONE</th><th>ASSIGNED TABLES</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>';
+                        data.waiters.forEach(waiter => {
+                            const statusClass = waiter.is_active ? 'active' : 'inactive';
+                            const statusText = waiter.is_active ? 'ACTIVE' : 'INACTIVE';
+                            const assignedTables = waiter.assigned_tables || '<span class="no-tables">No tables</span>';
+                            html += `<tr>
+                                <td><code class="waiter-id-badge">${waiter.waiter_id}</code></td>
+                                <td><strong>${waiter.name}</strong></td>
+                                <td>${waiter.email}</td>
+                                <td>${waiter.phone}</td>
+                                <td class="tables-cell">${assignedTables}</td>
+                                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                                <td class="action-buttons">
+                                    <button class="btn-sm btn-info" onclick="openEditWaiterModal(${waiter.waiter_id})" title="Edit Waiter">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn-sm btn-${waiter.is_active ? 'warning' : 'success'}" onclick="toggleWaiterStatus(${waiter.waiter_id})" title="${waiter.is_active ? 'Deactivate' : 'Activate'}">
+                                        <i class="fas fa-${waiter.is_active ? 'ban' : 'check'}"></i>
+                                    </button>
+                                    <button class="btn-sm btn-danger" onclick="deleteWaiter(${waiter.waiter_id})" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>`;
+                        });
+                        html += '</tbody></table>';
+                        document.getElementById('waiters-list-container').innerHTML = html;
+                    } else {
+                        document.getElementById('waiters-list-container').innerHTML = '<p class="no-data">No waiters added yet. Use the form above to add a waiter.</p>';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('waiters-list-container').innerHTML = '<p class="error">Error loading waiters</p>';
+                });
+        }
+        
+        // Edit Waiter Modal Functions
+        function openEditWaiterModal(waiterId) {
+            fetch(`/hotel-manager/api/waiter/${waiterId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const waiter = data.waiter;
+                        document.getElementById('edit-waiter-id').value = waiter.waiter_id;
+                        document.getElementById('edit-waiter-id-display').textContent = `${waiter.waiter_id}`;
+                        document.getElementById('edit-waiter-name').value = waiter.name;
+                        document.getElementById('edit-waiter-email').value = waiter.email;
+                        document.getElementById('edit-waiter-phone').value = waiter.phone;
+                        
+                        // Load table checkboxes for editing
+                        loadEditTableCheckboxes(waiter.assigned_table_ids || []);
+                        
+                        // Show modal
+                        document.getElementById('edit-waiter-modal').classList.add('show');
+                    } else {
+                        showMessage(data.message || 'Failed to load waiter details', 'error');
+                    }
+                })
+                .catch(error => {
+                    showMessage('Error loading waiter details', 'error');
+                });
+        }
+        
+        function closeEditWaiterModal() {
+            document.getElementById('edit-waiter-modal').classList.remove('show');
+        }
+        
+        function loadEditTableCheckboxes(assignedTableIds) {
+            fetch('/hotel-manager/api/tables-with-assignments')
+                .then(response => response.json())
+                .then(data => {
+                    const tables = data.tables || [];
+                    const container = document.getElementById('edit-table-checkboxes-container');
+                    
+                    if (tables.length === 0) {
+                        container.innerHTML = '<p class="no-data small">No tables available.</p>';
+                        return;
+                    }
+                    
+                    // Get unique tables (since API may return duplicates for multi-assigned)
+                    const uniqueTables = [];
+                    const seenIds = new Set();
+                    tables.forEach(t => {
+                        if (!seenIds.has(t.id)) {
+                            seenIds.add(t.id);
+                            uniqueTables.push(t);
+                        }
+                    });
+                    
+                    let html = '<div class="checkbox-grid">';
+                    uniqueTables.forEach(table => {
+                        const isChecked = assignedTableIds.includes(table.id);
+                        html += `
+                            <label class="checkbox-item">
+                                <input type="checkbox" value="${table.id}" ${isChecked ? 'checked' : ''}>
+                                <span class="checkbox-label">
+                                    <i class="fas fa-utensils"></i> Table ${table.table_number}
+                                </span>
+                            </label>
+                        `;
+                    });
+                    html += '</div>';
+                    container.innerHTML = html;
+                })
+                .catch(error => {
+                    document.getElementById('edit-table-checkboxes-container').innerHTML = '<p class="error small">Error loading tables</p>';
+                });
+        }
+        
+        function handleEditWaiter(event) {
+            event.preventDefault();
+            
+            const waiterId = document.getElementById('edit-waiter-id').value;
+            const name = document.getElementById('edit-waiter-name').value.trim();
+            const email = document.getElementById('edit-waiter-email').value.trim();
+            const phone = document.getElementById('edit-waiter-phone').value.trim();
+            
+            // Get selected table IDs
+            const tableCheckboxes = document.querySelectorAll('#edit-table-checkboxes-container input[type="checkbox"]:checked');
+            const tableIds = Array.from(tableCheckboxes).map(cb => parseInt(cb.value));
+            
+            if (!name || !email || !phone) {
+                showMessage('Please fill in all required fields!', 'error');
+                return;
+            }
+            
+            fetch('/hotel-manager/update-waiter', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    waiter_id: parseInt(waiterId),
+                    name,
+                    email,
+                    phone,
+                    table_ids: tableIds
+                })
             })
             .then(response => response.json())
             .then(data => {
                 showMessage(data.message, data.success ? 'success' : 'error');
                 if (data.success) {
-                    document.querySelector('.waiter-form').reset();
-                    setTimeout(() => { location.reload(); }, 1500);
+                    closeEditWaiterModal();
+                    loadWaitersList();
+                    loadTableAssignments();
+                    loadTableCheckboxes();
                 }
             });
+        }
+        
+        function toggleWaiterStatus(waiterId) {
+            fetch('/hotel-manager/toggle-waiter-status', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({waiter_id: waiterId})
+            })
+            .then(response => response.json())
+            .then(data => {
+                showMessage(data.message, data.success ? 'success' : 'error');
+                if (data.success) {
+                    loadWaitersList();
+                }
+            });
+        }
+        
+        function loadTableAssignments() {
+            Promise.all([
+                fetch('/hotel-manager/api/tables-with-assignments').then(r => r.json()),
+                fetch('/hotel-manager/api/waiters').then(r => r.json())
+            ])
+            .then(([tablesData, waitersData]) => {
+                const tables = tablesData.tables || [];
+                const waiters = waitersData.waiters || [];
+                
+                if (tables.length === 0) {
+                    document.getElementById('table-assignments-container').innerHTML = '<p class="no-data">No tables found. Add tables first.</p>';
+                    return;
+                }
+                
+                let html = '<div class="assignments-grid">';
+                tables.forEach(table => {
+                    // Get list of assigned waiter IDs for this table
+                    const assignedWaiterIds = table.waiter_id_list || [];
+                    
+                    html += `
+                        <div class="assignment-card">
+                            <div class="assignment-header">
+                                <i class="fas fa-utensils"></i>
+                                <span>Table ${table.table_number}</span>
+                            </div>
+                            <div class="assignment-body">
+                                <label>Assign Waiters:</label>
+                                <div class="waiter-checkboxes" id="table-${table.id}-waiters">
+                                    ${waiters.length > 0 ? waiters.map(w => `
+                                        <label class="checkbox-item small">
+                                            <input type="checkbox" 
+                                                   value="${w.waiter_id}" 
+                                                   ${assignedWaiterIds.includes(w.waiter_id) ? 'checked' : ''}
+                                                   onchange="updateTableWaiters(${table.id})">
+                                            <span>${w.name}</span>
+                                        </label>
+                                    `).join('') : '<p class="no-data small">No waiters available</p>'}
+                                </div>
+                            </div>
+                            ${table.waiter_names ? `<div class="current-assignment"><i class="fas fa-users"></i> ${table.waiter_names}</div>` : '<div class="current-assignment muted"><i class="fas fa-user-slash"></i> No waiters assigned</div>'}
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                document.getElementById('table-assignments-container').innerHTML = html;
+            })
+            .catch(error => {
+                document.getElementById('table-assignments-container').innerHTML = '<p class="error">Error loading assignments</p>';
+            });
+        }
+        
+        function updateTableWaiters(tableId) {
+            // Get all checked waiters for this table
+            const checkboxes = document.querySelectorAll(`#table-${tableId}-waiters input[type="checkbox"]:checked`);
+            const waiterIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            
+            fetch('/hotel-manager/update-table-waiters', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({table_id: tableId, waiter_ids: waiterIds})
+            })
+            .then(response => response.json())
+            .then(data => {
+                showMessage(data.message, data.success ? 'success' : 'error');
+                if (data.success) {
+                    // Reload to show updated waiter names
+                    loadTableAssignments();
+                    loadWaitersList();
+                }
+            });
+        }
+        
+        function assignTableToWaiter(tableId, waiterId) {
+            if (waiterId) {
+                fetch('/hotel-manager/assign-table', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({table_id: tableId, waiter_id: waiterId})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    showMessage(data.message, data.success ? 'success' : 'error');
+                    if (data.success) {
+                        loadTableAssignments();
+                    }
+                });
+            } else {
+                fetch('/hotel-manager/unassign-table', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({table_id: tableId})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    showMessage(data.message, data.success ? 'success' : 'error');
+                    if (data.success) {
+                        loadTableAssignments();
+                    }
+                });
+            }
         }
         
         function deleteWaiter(waiterId) {
@@ -1618,27 +2996,189 @@
         // Table Orders Functions
         function showTableSubSection(subSectionId) {
             // Hide all sub-sections
-            document.querySelectorAll('.sub-section').forEach(section => {
+            document.querySelectorAll('#table-orders .sub-section').forEach(section => {
                 section.classList.remove('active');
             });
             
-            // Remove active class from all sub-nav buttons
-            document.querySelectorAll('.sub-nav-btn').forEach(btn => {
+            // Remove active class from all sub-nav buttons within table-orders
+            document.querySelectorAll('#table-orders .sub-nav-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
             
             // Show selected sub-section
-            document.getElementById(subSectionId).classList.add('active');
+            const targetSection = document.getElementById(subSectionId);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
             
             // Add active class to clicked button
-            event.target.classList.add('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
             
             // Load data based on sub-section
             if (subSectionId === 'manage-tables') {
                 loadTablesData();
             } else if (subSectionId === 'view-orders') {
                 loadOrdersData();
+            } else if (subSectionId === 'active-bills') {
+                loadActiveBills();
             }
+        }
+        
+        // Load Active Bills - One per table
+        function loadActiveBills() {
+            fetch('/orders/api/active-bills')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        renderActiveBills(data.bills);
+                    } else {
+                        document.getElementById('active-bills-list').innerHTML = 
+                            '<div style="text-align: center; padding: 2rem; color: #ef4444;">Error loading bills</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading active bills:', error);
+                    document.getElementById('active-bills-list').innerHTML = 
+                        '<div style="text-align: center; padding: 2rem; color: #ef4444;">Error loading bills</div>';
+                });
+        }
+        
+        function renderActiveBills(bills) {
+            const container = document.getElementById('active-bills-list');
+            
+            if (bills.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: #718096;">
+                        <i class="fas fa-file-invoice" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                        <h3>No Active Bills</h3>
+                        <p>Bills will appear here when customers place orders via QR codes</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let billsHTML = `
+                <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 900px;">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white;">
+                            <th style="padding: 1rem; text-align: left; font-weight: 600;">Bill #</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600;">Table</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600;">Guest</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600;">Items</th>
+                            <th style="padding: 1rem; text-align: right; font-weight: 600;">Total Amount</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600;">Bill Status</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600;">Payment</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600;">Created</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            bills.forEach((bill, index) => {
+                const rowBg = index % 2 === 0 ? '#ffffff' : '#f8fafc';
+                const guestName = bill.guest_name || 'Guest';
+                const itemCount = bill.items ? bill.items.length : 0;
+                const billStatus = bill.bill_status || 'OPEN';
+                const paymentStatus = bill.payment_status || 'PENDING';
+                const isPaid = paymentStatus === 'PAID';
+                const isOpen = billStatus === 'OPEN';
+                
+                billsHTML += `
+                    <tr style="border-bottom: 1px solid #e2e8f0; background: ${rowBg};" onmouseover="this.style.background='#ecfdf5'" onmouseout="this.style.background='${rowBg}'">
+                        <td style="padding: 1rem;">
+                            <span style="font-weight: 700; color: #059669;">${bill.bill_number}</span>
+                        </td>
+                        <td style="padding: 1rem;">
+                            <span style="background: linear-gradient(135deg, #059669, #047857); color: white; padding: 0.5rem 0.75rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem;">T${bill.table_number}</span>
+                        </td>
+                        <td style="padding: 1rem;">
+                            <div style="font-weight: 500; color: #1f2937;"><i class="fas fa-user" style="margin-right: 0.5rem; color: #6b7280;"></i>${guestName}</div>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <span style="background: #e0e7ff; color: #4338ca; padding: 0.35rem 0.75rem; border-radius: 20px; font-weight: 600; font-size: 0.85rem;">${itemCount} items</span>
+                        </td>
+                        <td style="padding: 1rem; text-align: right;">
+                            <span style="font-weight: 700; font-size: 1.1rem; color: #059669;">₹${parseFloat(bill.total_amount).toFixed(2)}</span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <span style="padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; ${isOpen ? 'background: #dbeafe; color: #1d4ed8;' : 'background: #d1fae5; color: #065f46;'}">
+                                <i class="fas ${isOpen ? 'fa-clock' : 'fa-check-circle'}" style="margin-right: 0.25rem;"></i>${billStatus}
+                            </span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <span style="padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; ${isPaid ? 'background: #d1fae5; color: #065f46;' : 'background: #fef3c7; color: #92400e;'}">
+                                <i class="fas ${isPaid ? 'fa-check-circle' : 'fa-clock'}" style="margin-right: 0.25rem;"></i>${paymentStatus}
+                            </span>
+                        </td>
+                        <td style="padding: 1rem; color: #6b7280; font-size: 0.85rem;">
+                            <div><i class="fas fa-calendar" style="margin-right: 0.25rem;"></i>${new Date(bill.created_at).toLocaleDateString()}</div>
+                            <div style="margin-top: 0.25rem;"><i class="fas fa-clock" style="margin-right: 0.25rem;"></i>${new Date(bill.created_at).toLocaleTimeString()}</div>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: center;">
+                                <button onclick="viewBillDetails(${bill.id})" class="btn-sm" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 0.4rem; width: 100%;">
+                                    <i class="fas fa-eye"></i> View Bill
+                                </button>
+                                ${isOpen && !isPaid ? `
+                                    <button onclick="markBillPaid(${bill.id}, ${bill.table_id})" class="btn-sm" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 0.4rem; width: 100%;">
+                                        <i class="fas fa-check"></i> Mark Paid
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            billsHTML += '</tbody></table></div>';
+            container.innerHTML = billsHTML;
+        }
+        
+        function viewBillDetails(billId) {
+            fetch(`/orders/api/bill-details/${billId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.bill) {
+                        showBillModal(data.bill);
+                    } else {
+                        // Try getting from all-bills endpoint
+                        showTableMessage('Bill details not found', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading bill details:', error);
+                    showTableMessage('Error loading bill details', 'error');
+                });
+        }
+        
+        function markBillPaid(billId, tableId) {
+            if (!confirm('Mark this bill as PAID? This will close the bill and release the table.')) {
+                return;
+            }
+            
+            fetch('/orders/api/mark-bill-paid', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({bill_id: billId, table_id: tableId})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showTableMessage('Bill marked as PAID! Table is now available.', 'success');
+                    loadActiveBills();
+                    loadTablesData();
+                } else {
+                    showTableMessage('Error: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error marking bill paid:', error);
+                showTableMessage('Error processing payment', 'error');
+            });
         }
         
         function loadTablesData() {
@@ -1770,59 +3310,230 @@
             }
             
             let ordersHTML = `
-                <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
                     <thead>
-                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Order ID</th>
-                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Table</th>
-                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Items</th>
-                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Total</th>
-                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Status</th>
-                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Payment</th>
-                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Time</th>
-                            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #4a5568;">Actions</th>
+                        <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                            <th style="padding: 1rem; text-align: left; font-weight: 600;">Order #</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600;">Table & Guest</th>
+                            <th style="padding: 1rem; text-align: right; font-weight: 600;">Total</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600;">Order Status</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600;">Payment Status</th>
+                            <th style="padding: 1rem; text-align: left; font-weight: 600;">Time</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600;">Actions</th>
+                            <th style="padding: 1rem; text-align: center; font-weight: 600;">Bill</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
             
-            orders.forEach(order => {
-                const itemsText = order.items.map(item => `${item.name} (x${item.quantity})`).join(', ');
+            orders.forEach((order, index) => {
                 const orderTime = new Date(order.created_at).toLocaleString();
                 const orderStatusClass = order.order_status === 'COMPLETED' ? 'paid' : (order.order_status === 'PREPARING' ? 'busy' : 'pending');
-                const paymentClass = order.payment_status === 'PAID' ? 'paid' : 'pending';
+                const paymentStatus = order.payment_status || 'PENDING';
+                const paymentClass = paymentStatus === 'PAID' ? 'paid' : 'pending';
+                const guestName = order.guest_name || 'Guest';
+                const rowBg = index % 2 === 0 ? '#ffffff' : '#f8fafc';
+                const itemCount = order.items ? order.items.length : 0;
                 
                 ordersHTML += `
-                    <tr style="border-bottom: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-                        <td style="padding: 1rem; font-weight: 600;">#${order.id}</td>
+                    <tr style="border-bottom: 1px solid #e2e8f0; background: ${rowBg};" onmouseover="this.style.background='#eef2ff'" onmouseout="this.style.background='${rowBg}'">
                         <td style="padding: 1rem;">
-                            <span class="table-badge">Table ${order.table_number}</span>
-                        </td>
-                        <td style="padding: 1rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${itemsText}</td>
-                        <td style="padding: 1rem; font-weight: 600;">$${parseFloat(order.total_amount).toFixed(2)}</td>
-                        <td style="padding: 1rem;">
-                            <span class="status-badge status-${orderStatusClass}">${order.order_status}</span>
+                            <span style="font-weight: 700; color: #4f46e5;">#${order.id}</span>
+                            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">${itemCount} item(s)</div>
                         </td>
                         <td style="padding: 1rem;">
-                            <span class="status-badge status-${paymentClass}">${order.payment_status}</span>
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <span style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 0.5rem 0.75rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem;">T${order.table_number}</span>
+                                <div>
+                                    <div style="font-weight: 500; color: #1f2937;">${guestName}</div>
+                                </div>
+                            </div>
                         </td>
-                        <td style="padding: 1rem; color: #718096; font-size: 0.9rem;">${orderTime}</td>
-                        <td style="padding: 1rem;">
-                            ${order.order_status !== 'COMPLETED' ? `
-                                <button onclick="updateOrderStatus(${order.id}, 'PREPARING')" class="btn-secondary btn-sm" style="margin-right: 0.5rem;">
-                                    <i class="fas fa-clock"></i> Preparing
-                                </button>
-                                <button onclick="updateOrderStatus(${order.id}, 'COMPLETED')" class="btn-primary btn-sm">
-                                    <i class="fas fa-check"></i> Complete
-                                </button>
-                            ` : '<span style="color: #10b981;">✓ Completed</span>'}
+                        <td style="padding: 1rem; text-align: right;">
+                            <span style="font-weight: 700; font-size: 1.1rem; color: #059669;">₹${parseFloat(order.total_amount).toFixed(2)}</span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <span class="status-badge status-${orderStatusClass}" style="padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.8rem;">${order.order_status}</span>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <span class="status-badge status-${paymentClass}" style="padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.8rem; ${paymentStatus === 'PAID' ? 'background: #d1fae5; color: #065f46;' : 'background: #fef3c7; color: #92400e;'}">
+                                <i class="fas ${paymentStatus === 'PAID' ? 'fa-check-circle' : 'fa-clock'}" style="margin-right: 0.25rem;"></i>${paymentStatus}
+                            </span>
+                        </td>
+                        <td style="padding: 1rem; color: #6b7280; font-size: 0.85rem;">
+                            <div><i class="fas fa-calendar" style="margin-right: 0.25rem;"></i>${new Date(order.created_at).toLocaleDateString()}</div>
+                            <div style="margin-top: 0.25rem;"><i class="fas fa-clock" style="margin-right: 0.25rem;"></i>${new Date(order.created_at).toLocaleTimeString()}</div>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem; align-items: center;">
+                                ${order.order_status !== 'COMPLETED' ? `
+                                    <button onclick="updateOrderStatus(${order.id}, 'PREPARING')" class="btn-secondary btn-sm" style="width: 100%; padding: 0.4rem 0.6rem; font-size: 0.75rem;" ${order.order_status === 'PREPARING' ? 'disabled style="opacity: 0.5; width: 100%; padding: 0.4rem 0.6rem; font-size: 0.75rem;"' : ''}>
+                                        <i class="fas fa-fire"></i> Preparing
+                                    </button>
+                                    <button onclick="updateOrderStatus(${order.id}, 'COMPLETED')" class="btn-primary btn-sm" style="width: 100%; padding: 0.4rem 0.6rem; font-size: 0.75rem;">
+                                        <i class="fas fa-check"></i> Complete
+                                    </button>
+                                ` : `<span style="color: #10b981; font-weight: 600; font-size: 0.85rem;"><i class="fas fa-check-circle"></i> Done</span>`}
+                            </div>
+                        </td>
+                        <td style="padding: 1rem; text-align: center;">
+                            <button onclick="viewOrderBill(${order.id})" class="btn-sm" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 0.4rem;" title="${paymentStatus === 'PAID' ? 'View Bill' : 'Generate Bill'}">
+                                <i class="fas fa-file-invoice"></i>
+                                ${paymentStatus === 'PAID' ? 'View Bill' : 'Generate Bill'}
+                            </button>
                         </td>
                     </tr>
                 `;
             });
             
-            ordersHTML += '</tbody></table>';
+            ordersHTML += '</tbody></table></div>';
             container.innerHTML = ordersHTML;
+        }
+        
+        // View Order Bill Modal
+        function viewOrderBill(orderId) {
+            fetch(`/orders/api/bill/${orderId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.bill) {
+                        showBillModal(data.bill);
+                    } else {
+                        showTableMessage('Bill not found for this order', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading bill:', error);
+                    showTableMessage('Error loading bill', 'error');
+                });
+        }
+        
+        function showBillModal(bill) {
+            const modal = document.createElement('div');
+            modal.className = 'bill-modal-overlay';
+            modal.id = 'billModal';
+            
+            const guestName = bill.guest_name || 'Guest';
+            const paymentStatus = bill.payment_status || 'PENDING';
+            const isPaid = paymentStatus === 'PAID';
+            
+            const itemsHTML = bill.items.map(item => `
+                <tr>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #e2e8f0;">${item.name}</td>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #e2e8f0; text-align: center;">${item.quantity}</td>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #e2e8f0; text-align: right;">₹${parseFloat(item.price).toFixed(2)}</td>
+                    <td style="padding: 0.75rem; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: 500;">₹${(item.price * item.quantity).toFixed(2)}</td>
+                </tr>
+            `).join('');
+            
+            modal.innerHTML = `
+                <div class="bill-modal-content" style="max-width: 500px;">
+                    <div class="bill-modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px 12px 0 0;">
+                        <h2 style="color: white;"><i class="fas fa-file-invoice"></i> ${isPaid ? 'Bill Receipt' : 'Order Bill'}</h2>
+                        <button class="bill-modal-close" onclick="closeBillModal()" style="color: white; background: rgba(255,255,255,0.2); border-radius: 50%;">&times;</button>
+                    </div>
+                    <div class="bill-modal-body" style="padding: 1.5rem;">
+                        <div class="bill-header-info" style="text-align: center; padding-bottom: 1rem; border-bottom: 2px dashed #e2e8f0; margin-bottom: 1rem;">
+                            <h3 style="font-size: 1.5rem; color: #1f2937; margin-bottom: 0.25rem;">${bill.hotel_name || 'Restaurant'}</h3>
+                            <p style="color: #6b7280; font-size: 0.9rem;">${bill.hotel_address || ''}</p>
+                        </div>
+                        
+                        <div style="background: #f8fafc; border-radius: 10px; padding: 1rem; margin-bottom: 1rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                                <div>
+                                    <span style="color: #9ca3af; font-size: 0.75rem; text-transform: uppercase;">Bill Number</span>
+                                    <p style="font-weight: 600; color: #4f46e5; margin: 0.25rem 0 0;">#${bill.bill_number}</p>
+                                </div>
+                                <div>
+                                    <span style="color: #9ca3af; font-size: 0.75rem; text-transform: uppercase;">Table</span>
+                                    <p style="font-weight: 600; color: #1f2937; margin: 0.25rem 0 0;">Table ${bill.table_number}</p>
+                                </div>
+                                <div>
+                                    <span style="color: #9ca3af; font-size: 0.75rem; text-transform: uppercase;">Guest Name</span>
+                                    <p style="font-weight: 600; color: #1f2937; margin: 0.25rem 0 0;">${guestName}</p>
+                                </div>
+                                <div>
+                                    <span style="color: #9ca3af; font-size: 0.75rem; text-transform: uppercase;">Date & Time</span>
+                                    <p style="font-weight: 500; color: #1f2937; margin: 0.25rem 0 0; font-size: 0.85rem;">${new Date(bill.created_at).toLocaleString()}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h4 style="font-size: 0.85rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.75rem;">Order Items</h4>
+                        <table class="bill-items-table" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: #f1f5f9;">
+                                    <th style="padding: 0.75rem; text-align: left; font-size: 0.8rem; color: #64748b;">Item</th>
+                                    <th style="padding: 0.75rem; text-align: center; font-size: 0.8rem; color: #64748b;">Qty</th>
+                                    <th style="padding: 0.75rem; text-align: right; font-size: 0.8rem; color: #64748b;">Price</th>
+                                    <th style="padding: 0.75rem; text-align: right; font-size: 0.8rem; color: #64748b;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itemsHTML}
+                            </tbody>
+                        </table>
+                        <div class="bill-totals" style="background: #f8fafc; border-radius: 10px; padding: 1rem; margin-top: 1rem;">
+                            <div class="bill-total-row" style="display: flex; justify-content: space-between; padding: 0.5rem 0; color: #6b7280;">
+                                <span>Subtotal:</span>
+                                <span>₹${parseFloat(bill.subtotal).toFixed(2)}</span>
+                            </div>
+                            <div class="bill-total-row" style="display: flex; justify-content: space-between; padding: 0.5rem 0; color: #6b7280;">
+                                <span>Tax (${bill.tax_rate || 0}%):</span>
+                                <span>₹${parseFloat(bill.tax_amount || 0).toFixed(2)}</span>
+                            </div>
+                            <div class="bill-total-row grand-total" style="display: flex; justify-content: space-between; padding: 0.75rem 0; margin-top: 0.5rem; border-top: 2px solid #e2e8f0; font-size: 1.25rem; font-weight: 700;">
+                                <span>Grand Total:</span>
+                                <span style="color: #059669;">₹${parseFloat(bill.total_amount).toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1.25rem; padding: 1rem; border-radius: 10px; text-align: center; font-weight: 600; ${isPaid ? 'background: #d1fae5; color: #065f46;' : 'background: #fef3c7; color: #92400e;'}">
+                            <i class="fas ${isPaid ? 'fa-check-circle' : 'fa-clock'}" style="margin-right: 0.5rem;"></i>
+                            Payment Status: ${paymentStatus}
+                        </div>
+                    </div>
+                    <div class="bill-modal-footer" style="display: flex; gap: 1rem; padding: 1rem 1.5rem; border-top: 1px solid #e2e8f0; justify-content: flex-end;">
+                        <button onclick="printBill()" class="btn-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem;"><i class="fas fa-print"></i> Print Bill</button>
+                        <button onclick="closeBillModal()" class="btn-primary">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            setTimeout(() => modal.classList.add('show'), 10);
+        }
+        
+        function closeBillModal() {
+            const modal = document.getElementById('billModal');
+            if (modal) {
+                modal.classList.remove('show');
+                setTimeout(() => modal.remove(), 300);
+            }
+        }
+        
+        function printBill() {
+            const billContent = document.querySelector('.bill-modal-body').innerHTML;
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Print Bill</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+                        .bill-header-info { text-align: center; margin-bottom: 20px; }
+                        .bill-header-info h3 { margin: 0; font-size: 1.5rem; }
+                        .bill-totals { margin-top: 20px; }
+                        .bill-total-row { display: flex; justify-content: space-between; padding: 5px 0; }
+                        .grand-total { font-weight: bold; font-size: 1.2rem; border-top: 2px solid #333; padding-top: 10px; }
+                    </style>
+                </head>
+                <body>${billContent}</body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
         }
         
         function updateOrderStatus(orderId, status) {
@@ -1882,6 +3593,684 @@
                 showTableMessage('Error deleting table', 'error');
             });
         }
+        
+        // ========== WALLET FUNCTIONS ==========
+        const hotelId = {{ hotel_id if hotel_id else 'null' }};
+        
+        function loadWalletData() {
+            if (!hotelId) return;
+            
+            fetch(`/wallet/api/balance/${hotelId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.wallet) {
+                    document.getElementById('wallet-balance-display').textContent = '₹' + data.wallet.balance.toFixed(2);
+                    document.getElementById('verification-charge-display').textContent = '₹' + data.wallet.per_verification_charge.toFixed(2);
+                    document.getElementById('order-charge-display').textContent = '₹' + data.wallet.per_order_charge.toFixed(2);
+                    
+                    // Update dashboard wallet alert
+                    updateDashboardWalletAlert(data.wallet.balance, data.wallet.per_verification_charge, data.wallet.per_order_charge);
+                }
+            })
+            .catch(error => console.error('Error loading wallet:', error));
+        }
+        
+        function updateDashboardWalletAlert(balance, verificationCharge, orderCharge) {
+            const alert = document.getElementById('wallet-alert');
+            const balanceSpan = document.getElementById('dashboard-wallet-balance');
+            const warning = document.getElementById('wallet-warning');
+            
+            if (!alert) return;
+            
+            balanceSpan.textContent = '₹' + balance.toFixed(2);
+            alert.style.display = 'block';
+            
+            // Determine minimum required balance
+            const minRequired = Math.max(verificationCharge, orderCharge);
+            
+            // Update alert styling based on balance
+            alert.classList.remove('low-balance', 'zero-balance');
+            if (balance <= 0) {
+                alert.classList.add('zero-balance');
+                warning.style.display = 'inline';
+                warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> No balance! Add funds to continue operations';
+            } else if (balance < minRequired * 5) {
+                alert.classList.add('low-balance');
+                warning.style.display = 'inline';
+                warning.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Low balance - Add funds soon';
+            } else {
+                warning.style.display = 'none';
+            }
+        }
+        
+        function loadWalletTransactions() {
+            if (!hotelId) return;
+            
+            const container = document.getElementById('transactions-container');
+            container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Loading transactions...</div>';
+            
+            fetch(`/wallet/api/transactions/${hotelId}?limit=50`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.transactions.length > 0) {
+                    let html = '<table class="data-table"><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Balance After</th><th>Description</th></tr></thead><tbody>';
+                    data.transactions.forEach(t => {
+                        const typeClass = t.transaction_type === 'CREDIT' ? 'text-success' : 'text-danger';
+                        const typeIcon = t.transaction_type === 'CREDIT' ? 'fa-arrow-up' : 'fa-arrow-down';
+                        html += `
+                            <tr>
+                                <td>${t.created_at}</td>
+                                <td><span class="${typeClass}"><i class="fas ${typeIcon}"></i> ${t.transaction_type}</span></td>
+                                <td class="${typeClass}">₹${t.amount.toFixed(2)}</td>
+                                <td>₹${t.balance_after.toFixed(2)}</td>
+                                <td>${t.description || '-'}</td>
+                            </tr>
+                        `;
+                    });
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<div class="no-data-message"><i class="fas fa-receipt"></i><p>No transactions yet</p></div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading transactions:', error);
+                container.innerHTML = '<div class="no-data-message error"><i class="fas fa-exclamation-circle"></i><p>Error loading transactions</p></div>';
+            });
+        }
+        
+        function managerAddBalance() {
+            if (!hotelId) {
+                alert('Hotel not configured');
+                return;
+            }
+            
+            const amount = parseFloat(document.getElementById('manager-add-amount').value);
+            const description = document.getElementById('manager-add-description').value || 'Balance added by Manager';
+            
+            if (!amount || amount <= 0) {
+                alert('Please enter a valid amount');
+                return;
+            }
+            
+            fetch('/wallet/api/add-balance', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    hotel_id: hotelId,
+                    amount: amount,
+                    description: description
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message + ' New balance: ₹' + data.new_balance.toFixed(2));
+                    document.getElementById('manager-add-amount').value = '';
+                    document.getElementById('manager-add-description').value = '';
+                    loadWalletData();
+                    loadWalletTransactions();
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to add balance'));
+                }
+            })
+            .catch(error => {
+                console.error('Error adding balance:', error);
+                alert('Error adding balance');
+            });
+        }
+        
+        // Load wallet data when wallet section is shown
+        const originalShowSection = showSection;
+        showSection = function(sectionId) {
+            originalShowSection(sectionId);
+            if (sectionId === 'wallet') {
+                loadWalletData();
+                loadWalletTransactions();
+            }
+            if (sectionId === 'daily-special') {
+                loadDailySpecial();
+            }
+        };
+        
+        // Load wallet data on page load for dashboard alert
+        document.addEventListener('DOMContentLoaded', function() {
+            loadWalletData();
+        });
+
+        // ========== DAILY SPECIAL MENU FUNCTIONS ==========
+        let currentSpecialData = null;
+        let isEditingSpecial = false;
+
+        function loadDailySpecial() {
+            // Set today's date
+            const today = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('special-today-date').textContent = today.toLocaleDateString('en-US', options);
+
+            // Fetch current special
+            fetch('/hotel-manager/api/daily-special')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.special) {
+                        currentSpecialData = data.special;
+                        displayCurrentSpecial(data.special);
+                    } else {
+                        currentSpecialData = null;
+                        hideCurrentSpecial();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading daily special:', error);
+                    currentSpecialData = null;
+                    hideCurrentSpecial();
+                });
+        }
+
+        function displayCurrentSpecial(special) {
+            document.getElementById('display-special-name').textContent = special.menu_name;
+            document.getElementById('display-special-description').textContent = special.description || 'No description added';
+            document.getElementById('display-special-price').textContent = '₹' + parseFloat(special.price).toFixed(2);
+            
+            // Handle image display
+            const imageContainer = document.getElementById('display-special-image-container');
+            const imageElement = document.getElementById('display-special-image');
+            if (special.image_path) {
+                imageElement.src = special.image_path;
+                imageContainer.style.display = 'block';
+            } else {
+                imageContainer.style.display = 'none';
+            }
+            
+            document.getElementById('current-special-container').style.display = 'block';
+            document.getElementById('special-form-container').style.display = 'none';
+            
+            // Update live preview with current special data
+            updatePamphletPreviewFromData(special);
+        }
+
+        function hideCurrentSpecial() {
+            document.getElementById('current-special-container').style.display = 'none';
+            document.getElementById('special-form-container').style.display = 'block';
+            document.getElementById('special-form-title').innerHTML = '<i class="fas fa-plus-circle"></i> Add Today\'s Special';
+            document.getElementById('special-submit-btn').innerHTML = '<i class="fas fa-save"></i> Save Today\'s Special';
+            document.getElementById('special-cancel-btn').style.display = 'none';
+            clearSpecialForm();
+            isEditingSpecial = false;
+            
+            // Reset preview to placeholder state
+            resetPamphletPreview();
+        }
+
+        function editDailySpecial() {
+            if (!currentSpecialData) return;
+            
+            isEditingSpecial = true;
+            document.getElementById('special-name').value = currentSpecialData.menu_name;
+            document.getElementById('special-description').value = currentSpecialData.description || '';
+            document.getElementById('special-price').value = currentSpecialData.price;
+            
+            // Show existing image preview if available
+            if (currentSpecialData.image_path) {
+                document.getElementById('preview-img').src = currentSpecialData.image_path;
+                document.getElementById('special-image-preview').style.display = 'block';
+                document.getElementById('upload-placeholder').style.display = 'none';
+            }
+            
+            document.getElementById('current-special-container').style.display = 'none';
+            document.getElementById('special-form-container').style.display = 'block';
+            document.getElementById('special-form-title').innerHTML = '<i class="fas fa-edit"></i> Edit Today\'s Special';
+            document.getElementById('special-submit-btn').innerHTML = '<i class="fas fa-save"></i> Update Special';
+            document.getElementById('special-cancel-btn').style.display = 'inline-flex';
+            
+            // Update preview to reflect edit mode
+            updatePamphletPreview();
+        }
+
+        function cancelEditSpecial() {
+            if (currentSpecialData) {
+                displayCurrentSpecial(currentSpecialData);
+            } else {
+                hideCurrentSpecial();
+            }
+            isEditingSpecial = false;
+        }
+
+        function clearSpecialForm() {
+            document.getElementById('special-name').value = '';
+            document.getElementById('special-description').value = '';
+            document.getElementById('special-price').value = '';
+            document.getElementById('special-image').value = '';
+            document.getElementById('special-message').innerHTML = '';
+            document.getElementById('special-message').className = 'message';
+            document.getElementById('special-image-preview').style.display = 'none';
+            document.getElementById('upload-placeholder').style.display = 'block';
+        }
+
+        function previewSpecialImage(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                
+                // Check file size (5MB limit)
+                if (file.size > 5 * 1024 * 1024) {
+                    showSpecialMessage('Image size must be less than 5MB', 'error');
+                    input.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('preview-img').src = e.target.result;
+                    document.getElementById('special-image-preview').style.display = 'block';
+                    document.getElementById('upload-placeholder').style.display = 'none';
+                    
+                    // Update pamphlet preview with new image
+                    updatePamphletPreview();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removeSpecialImage() {
+            document.getElementById('special-image').value = '';
+            document.getElementById('preview-img').src = '';
+            document.getElementById('special-image-preview').style.display = 'none';
+            document.getElementById('upload-placeholder').style.display = 'block';
+            
+            // Update pamphlet preview without image
+            updatePamphletPreview();
+        }
+
+        function showSpecialMessage(message, type) {
+            const msgEl = document.getElementById('special-message');
+            msgEl.textContent = message;
+            msgEl.className = 'message ' + type;
+            msgEl.style.display = 'block';
+            
+            setTimeout(() => {
+                msgEl.style.display = 'none';
+            }, 3000);
+        }
+
+        function handleDailySpecialSubmit(event) {
+            event.preventDefault();
+            
+            const menuName = document.getElementById('special-name').value.trim();
+            const description = document.getElementById('special-description').value.trim();
+            const price = parseFloat(document.getElementById('special-price').value);
+            const imageInput = document.getElementById('special-image');
+            
+            if (!menuName) {
+                showSpecialMessage('Please enter a menu name', 'error');
+                return;
+            }
+            if (!price || price <= 0) {
+                showSpecialMessage('Please enter a valid price', 'error');
+                return;
+            }
+            
+            const submitBtn = document.getElementById('special-submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            
+            // Use FormData to handle file upload
+            const formData = new FormData();
+            formData.append('menu_name', menuName);
+            formData.append('description', description);
+            formData.append('price', price);
+            
+            if (imageInput.files && imageInput.files[0]) {
+                formData.append('image', imageInput.files[0]);
+            }
+            
+            fetch('/hotel-manager/api/daily-special', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> ' + (isEditingSpecial ? 'Update Special' : 'Save Today\'s Special');
+                
+                if (data.success) {
+                    showSpecialMessage(data.message, 'success');
+                    loadDailySpecial();
+                } else {
+                    showSpecialMessage(data.message || 'Error saving special', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving special:', error);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> ' + (isEditingSpecial ? 'Update Special' : 'Save Today\'s Special');
+                showSpecialMessage('Error saving special menu', 'error');
+            });
+        }
+
+        function deleteDailySpecial() {
+            if (!confirm('Are you sure you want to remove today\'s special menu?')) {
+                return;
+            }
+            
+            fetch('/hotel-manager/api/daily-special', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentSpecialData = null;
+                    hideCurrentSpecial();
+                    showSpecialMessage(data.message, 'success');
+                } else {
+                    showSpecialMessage(data.message || 'Error removing special', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting special:', error);
+                showSpecialMessage('Error removing special menu', 'error');
+            });
+        }
+
+        // ========== LIVE PREVIEW FUNCTIONS ==========
+        let previewImageDataUrl = null;
+
+        function updatePamphletPreview() {
+            const name = document.getElementById('special-name').value.trim() || 'Menu Name';
+            const description = document.getElementById('special-description').value.trim() || 'Description will appear here...';
+            const price = parseFloat(document.getElementById('special-price').value) || 0;
+            
+            // Update preview text
+            document.getElementById('preview-title').textContent = name;
+            document.getElementById('preview-description').textContent = description;
+            document.getElementById('preview-price').textContent = '₹' + price.toFixed(2);
+            
+            // Handle image preview
+            const previewImg = document.getElementById('preview-img');
+            const previewHeroSection = document.getElementById('preview-hero-section');
+            const previewNoImageSection = document.getElementById('preview-no-image-section');
+            const previewHeroImg = document.getElementById('preview-hero-img');
+            
+            if (previewImg && previewImg.src && previewImg.style.display !== 'none' && document.getElementById('special-image-preview').style.display !== 'none') {
+                previewHeroImg.src = previewImg.src;
+                previewImageDataUrl = previewImg.src;
+                previewHeroSection.style.display = 'block';
+                previewNoImageSection.style.display = 'none';
+            } else if (currentSpecialData && currentSpecialData.image_path && !isEditingSpecial) {
+                previewHeroImg.src = currentSpecialData.image_path;
+                previewImageDataUrl = currentSpecialData.image_path;
+                previewHeroSection.style.display = 'block';
+                previewNoImageSection.style.display = 'none';
+            } else {
+                previewImageDataUrl = null;
+                previewHeroSection.style.display = 'none';
+                previewNoImageSection.style.display = 'flex';
+            }
+        }
+
+        function updatePamphletPreviewFromData(special) {
+            document.getElementById('preview-title').textContent = special.menu_name || 'Menu Name';
+            document.getElementById('preview-description').textContent = special.description || 'No description';
+            document.getElementById('preview-price').textContent = '₹' + parseFloat(special.price).toFixed(2);
+            
+            const previewHeroSection = document.getElementById('preview-hero-section');
+            const previewNoImageSection = document.getElementById('preview-no-image-section');
+            const previewHeroImg = document.getElementById('preview-hero-img');
+            
+            if (special.image_path) {
+                previewHeroImg.src = special.image_path;
+                previewImageDataUrl = special.image_path;
+                previewHeroSection.style.display = 'block';
+                previewNoImageSection.style.display = 'none';
+            } else {
+                previewImageDataUrl = null;
+                previewHeroSection.style.display = 'none';
+                previewNoImageSection.style.display = 'flex';
+            }
+        }
+
+        function resetPamphletPreview() {
+            document.getElementById('preview-title').textContent = 'Menu Name';
+            document.getElementById('preview-description').textContent = 'Description will appear here...';
+            document.getElementById('preview-price').textContent = '₹0.00';
+            
+            document.getElementById('preview-hero-section').style.display = 'none';
+            document.getElementById('preview-no-image-section').style.display = 'flex';
+            previewImageDataUrl = null;
+        }
+
+        // ========== DOWNLOAD PAMPHLET FUNCTION ==========
+        function downloadPamphlet() {
+            const downloadBtn = document.getElementById('download-pamphlet-btn');
+            downloadBtn.disabled = true;
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            
+            // Get current preview data
+            const name = document.getElementById('preview-title').textContent;
+            const description = document.getElementById('preview-description').textContent;
+            const price = document.getElementById('preview-price').textContent;
+            
+            // Create a canvas-based image
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size (2x for high resolution)
+            const scale = 2;
+            canvas.width = 400 * scale;
+            canvas.height = 600 * scale;
+            ctx.scale(scale, scale);
+            
+            // Background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 400, 600);
+            
+            // Draw ribbon
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(0, 0, 400, 40);
+            
+            // Ribbon text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 11px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('★ TODAY\'S SPECIAL ★', 200, 26);
+            
+            const drawRestOfPamphlet = (imageY) => {
+                // Content area background
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, imageY, 400, 600 - imageY);
+                
+                // Title
+                ctx.fillStyle = '#1e293b';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                const titleY = imageY + 35;
+                ctx.fillText(name.substring(0, 30), 200, titleY);
+                
+                // Description
+                ctx.fillStyle = '#64748b';
+                ctx.font = '14px Arial';
+                const descLines = wrapText(ctx, description, 340);
+                let descY = titleY + 30;
+                descLines.forEach((line, i) => {
+                    if (i < 2) {
+                        ctx.fillText(line, 200, descY);
+                        descY += 20;
+                    }
+                });
+                
+                // Price box
+                const priceBoxY = descY + 15;
+                ctx.fillStyle = '#f0fdf4';
+                roundRect(ctx, 130, priceBoxY, 140, 50, 10, true, false);
+                ctx.strokeStyle = '#bbf7d0';
+                ctx.lineWidth = 1;
+                roundRect(ctx, 130, priceBoxY, 140, 50, 10, false, true);
+                
+                ctx.fillStyle = '#059669';
+                ctx.font = '10px Arial';
+                ctx.fillText('Special Price', 200, priceBoxY + 18);
+                ctx.font = 'bold 22px Arial';
+                ctx.fillText(price, 200, priceBoxY + 42);
+                
+                // Add to Cart button
+                const btnY = priceBoxY + 70;
+                ctx.fillStyle = '#0891b2';
+                roundRect(ctx, 50, btnY, 300, 45, 10, true, false);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 15px Arial';
+                ctx.fillText('🛒 Add to Cart', 200, btnY + 29);
+                
+                // Note
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '11px Arial';
+                ctx.fillText('ℹ Review your cart before placing the order', 200, btnY + 70);
+                
+                // Footer
+                const footerY = 560;
+                ctx.fillStyle = '#fef3c7';
+                ctx.fillRect(0, footerY, 400, 40);
+                ctx.fillStyle = '#92400e';
+                ctx.font = 'bold 12px Arial';
+                ctx.fillText('⏰ Limited time - Today only!', 200, footerY + 25);
+                
+                // Convert to image and download
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'daily-special-pamphlet.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    downloadBtn.disabled = false;
+                    downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download Pamphlet';
+                }, 'image/png', 1.0);
+            };
+            
+            // Check if there's an image
+            if (previewImageDataUrl) {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = function() {
+                    // Draw image section
+                    const imgHeight = 200;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.rect(0, 40, 400, imgHeight);
+                    ctx.clip();
+                    
+                    // Scale and center image
+                    const imgRatio = img.width / img.height;
+                    let drawWidth = 400;
+                    let drawHeight = drawWidth / imgRatio;
+                    if (drawHeight < imgHeight) {
+                        drawHeight = imgHeight;
+                        drawWidth = drawHeight * imgRatio;
+                    }
+                    const drawX = (400 - drawWidth) / 2;
+                    const drawY = 40 + (imgHeight - drawHeight) / 2;
+                    ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+                    ctx.restore();
+                    
+                    // Add gradient fade
+                    const gradient = ctx.createLinearGradient(0, 40 + imgHeight - 60, 0, 40 + imgHeight);
+                    gradient.addColorStop(0, 'rgba(255,255,255,0)');
+                    gradient.addColorStop(1, 'rgba(255,255,255,1)');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 40 + imgHeight - 60, 400, 60);
+                    
+                    // Chef's Pick badge
+                    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+                    roundRect(ctx, 15, 55, 90, 24, 12, true, false);
+                    ctx.fillStyle = '#ea580c';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('🏆 Chef\'s Pick', 60, 71);
+                    
+                    drawRestOfPamphlet(40 + imgHeight);
+                };
+                img.onerror = function() {
+                    // Draw placeholder if image fails
+                    drawPlaceholderAndContent();
+                };
+                img.src = previewImageDataUrl;
+            } else {
+                drawPlaceholderAndContent();
+            }
+            
+            function drawPlaceholderAndContent() {
+                // Draw no-image placeholder
+                const placeholderHeight = 140;
+                const gradient = ctx.createLinearGradient(0, 40, 0, 40 + placeholderHeight);
+                gradient.addColorStop(0, '#fef3c7');
+                gradient.addColorStop(0.5, '#fde68a');
+                gradient.addColorStop(1, '#fed7aa');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 40, 400, placeholderHeight);
+                
+                // Icon circle
+                ctx.fillStyle = '#ea580c';
+                ctx.beginPath();
+                ctx.arc(200, 40 + placeholderHeight/2 - 10, 35, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Icon text
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('🍽️', 200, 40 + placeholderHeight/2 - 2);
+                
+                // Chef's Special text
+                ctx.fillStyle = '#92400e';
+                ctx.font = 'bold 11px Arial';
+                ctx.fillText('CHEF\'S SPECIAL', 200, 40 + placeholderHeight - 15);
+                
+                drawRestOfPamphlet(40 + placeholderHeight);
+            }
+            
+            // Helper functions
+            function wrapText(ctx, text, maxWidth) {
+                const words = text.split(' ');
+                const lines = [];
+                let currentLine = '';
+                
+                words.forEach(word => {
+                    const testLine = currentLine + word + ' ';
+                    const metrics = ctx.measureText(testLine);
+                    if (metrics.width > maxWidth && currentLine !== '') {
+                        lines.push(currentLine.trim());
+                        currentLine = word + ' ';
+                    } else {
+                        currentLine = testLine;
+                    }
+                });
+                lines.push(currentLine.trim());
+                return lines;
+            }
+            
+            function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+                ctx.beginPath();
+                ctx.moveTo(x + radius, y);
+                ctx.lineTo(x + width - radius, y);
+                ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+                ctx.lineTo(x + width, y + height - radius);
+                ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+                ctx.lineTo(x + radius, y + height);
+                ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+                ctx.lineTo(x, y + radius);
+                ctx.quadraticCurveTo(x, y, x + radius, y);
+                ctx.closePath();
+                if (fill) ctx.fill();
+                if (stroke) ctx.stroke();
+            }
+        }
+
+        // Initialize preview on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            resetPamphletPreview();
+        });
     </script>
 </body>
 </html>

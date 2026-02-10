@@ -461,6 +461,40 @@ def get_public_menu(table_id):
         return jsonify({"success": False, "message": f"Server error: {str(e)}"}), 500
 
 
+@menu_bp.route("/api/public-daily-special/<int:table_id>")
+def get_public_daily_special(table_id):
+    """Public API to get today's daily special for a table - no login required"""
+    try:
+        from orders.table_models import Table
+        from hotel_manager.models import DailySpecialMenu
+        
+        # Get the table to find its hotel_id
+        table = Table.get_table_by_id(table_id)
+        if not table:
+            return jsonify({"success": False, "message": "Table not found"}), 404
+        
+        hotel_id = table.get('hotel_id')
+        if not hotel_id:
+            return jsonify({"success": False, "message": "Hotel not configured for this table"}), 400
+        
+        # Get today's special for this hotel
+        special = DailySpecialMenu.get_today_special(hotel_id)
+        
+        if special:
+            return jsonify({
+                "success": True, 
+                "special": {
+                    "menu_name": special['menu_name'],
+                    "description": special['description'],
+                    "price": float(special['price']),
+                    "image_path": special.get('image_path')
+                }
+            })
+        return jsonify({"success": True, "special": None})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Server error: {str(e)}"}), 500
+
+
 @menu_bp.route("/api/dish/<int:dish_id>")
 def get_dish(dish_id):
     hotel_id = session.get('hotel_id')

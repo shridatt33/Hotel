@@ -4,11 +4,135 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>All Hotels - HotelEase Admin</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
 </head>
 <body>
+    <!-- Edit Hotel Modal -->
+    <div class="modal-overlay" id="edit-hotel-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Edit Hotel</h3>
+                <button class="modal-close" onclick="closeEditHotelModal()">&times;</button>
+            </div>
+            <form id="edit-hotel-form" onsubmit="handleEditHotel(event)">
+                <input type="hidden" id="edit-hotel-id">
+                
+                <div class="form-group">
+                    <label for="edit-hotel-name">Hotel Name <span class="required">*</span></label>
+                    <input type="text" id="edit-hotel-name" required placeholder="Enter hotel name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-hotel-address">Address</label>
+                    <input type="text" id="edit-hotel-address" placeholder="Enter address">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-hotel-city">City</label>
+                    <input type="text" id="edit-hotel-city" placeholder="Enter city">
+                </div>
+                
+                <div class="form-group">
+                    <label>Modules</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="edit-kyc-enabled">
+                            <span><i class="fas fa-id-card"></i> KYC Verification</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="edit-food-enabled">
+                            <span><i class="fas fa-utensils"></i> Food Ordering</span>
+                        </label>
+                    </div>
+                    <small class="form-hint">At least one module must be enabled</small>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditHotelModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="delete-hotel-modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3><i class="fas fa-exclamation-triangle" style="color: var(--danger);"></i> Delete Hotel</h3>
+                <button class="modal-close" onclick="closeDeleteHotelModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="delete-hotel-name"></strong>?</p>
+                <p class="text-danger"><small>This action cannot be undone. All associated data (managers, waiters, tables, orders) will be permanently deleted.</small></p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeDeleteHotelModal()">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeleteHotel()"><i class="fas fa-trash"></i> Delete</button>
+            </div>
+            <input type="hidden" id="delete-hotel-id">
+        </div>
+    </div>
+
+    <!-- Add Balance Modal -->
+    <div class="modal-overlay" id="add-balance-modal">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3><i class="fas fa-wallet" style="color: var(--success);"></i> Add Balance</h3>
+                <button class="modal-close" onclick="closeAddBalanceModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Add balance to <strong id="balance-hotel-name"></strong></p>
+                <p style="color: var(--gray); margin-bottom: 1rem;">Current Balance: <strong id="current-balance" style="color: var(--success);">₹0.00</strong></p>
+                
+                <div class="form-group">
+                    <label for="add-amount">Amount (₹)</label>
+                    <input type="number" id="add-amount" min="1" step="0.01" placeholder="Enter amount" required>
+                </div>
+                <div class="form-group">
+                    <label for="add-description">Description (Optional)</label>
+                    <input type="text" id="add-description" placeholder="e.g., Monthly recharge">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeAddBalanceModal()">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="confirmAddBalance()"><i class="fas fa-plus"></i> Add Balance</button>
+            </div>
+            <input type="hidden" id="balance-hotel-id">
+        </div>
+    </div>
+
+    <!-- Update Charges Modal -->
+    <div class="modal-overlay" id="update-charges-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-rupee-sign" style="color: var(--primary);"></i> Update Charges</h3>
+                <button class="modal-close" onclick="closeUpdateChargesModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Update pricing for <strong id="charges-hotel-name"></strong></p>
+                
+                <div class="form-group">
+                    <label for="update-verification-charge">Per Verification Charge (₹)</label>
+                    <input type="number" id="update-verification-charge" min="0" step="0.01" placeholder="0.00">
+                    <small style="color: var(--gray);">Charged for each KYC verification</small>
+                </div>
+                <div class="form-group">
+                    <label for="update-order-charge">Per Order Charge (₹)</label>
+                    <input type="number" id="update-order-charge" min="0" step="0.01" placeholder="0.00">
+                    <small style="color: var(--gray);">Charged for each food order placed</small>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeUpdateChargesModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmUpdateCharges()"><i class="fas fa-save"></i> Update Charges</button>
+            </div>
+            <input type="hidden" id="charges-hotel-id">
+        </div>
+    </div>
+
     <!-- Sidebar -->
     <aside class="sidebar">
         <div class="sidebar-brand">
@@ -80,6 +204,9 @@
         </div>
     </header>
 
+    <!-- Flash Messages -->
+    <div id="flash-container" class="flash-container"></div>
+
     <!-- Main Content -->
     <main class="main-content">
         <div class="content-header">
@@ -101,12 +228,14 @@
                         <th>City</th>
                         <th>KYC Module</th>
                         <th>Food Module</th>
+                        <th>Wallet Balance</th>
+                        <th>Charges</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="hotels-table-body">
                     {% for h in hotels %}
-                    <tr>
+                    <tr data-hotel-id="{{ h[0] }}">
                         <td><strong>#{{ h[0] }}</strong></td>
                         <td>
                             <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -132,16 +261,41 @@
                             {% endif %}
                         </td>
                         <td>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="wallet-balance {% if h[6] > 100 %}balance-good{% elif h[6] > 0 %}balance-low{% else %}balance-zero{% endif %}" id="balance-{{ h[0] }}">
+                                    ₹{{ "%.2f"|format(h[6]) }}
+                                </span>
+                                <button class="btn btn-sm btn-success" onclick="openAddBalanceModal({{ h[0] }}, '{{ h[1] }}', {{ h[6] }})" title="Add Balance">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-size: 0.8rem; color: var(--gray);">
+                                <div><i class="fas fa-id-card"></i> ₹{{ "%.2f"|format(h[7]) }}/verify</div>
+                                <div><i class="fas fa-utensils"></i> ₹{{ "%.2f"|format(h[8]) }}/order</div>
+                            </div>
+                            <button class="btn btn-sm btn-outline" onclick="openUpdateChargesModal({{ h[0] }}, '{{ h[1] }}', {{ h[7] }}, {{ h[8] }})" title="Update Charges" style="margin-top: 0.25rem; font-size: 0.7rem;">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                        </td>
+                        <td>
                             <div class="action-buttons">
-                                <a href="{{ url_for('admin.edit_hotel_modules', hotel_id=h[0]) }}" class="btn btn-edit">
-                                    <i class="fas fa-cog"></i> Edit Modules
+                                <button class="btn btn-edit" onclick="openEditHotelModal({{ h[0] }}, '{{ h[1] }}', '{{ h[5] or '' }}', '{{ h[2] or '' }}', {{ 'true' if h[3] else 'false' }}, {{ 'true' if h[4] else 'false' }})" title="Edit Hotel">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                                <a href="{{ url_for('admin.edit_hotel_modules', hotel_id=h[0]) }}" class="btn btn-edit" title="Edit Modules">
+                                    <i class="fas fa-cog"></i> Modules
                                 </a>
+                                <button class="btn btn-delete" onclick="openDeleteHotelModal({{ h[0] }}, '{{ h[1] }}')" title="Delete Hotel">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
                             </div>
                         </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="no-data">
+                        <td colspan="8" class="no-data">
                             <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
                             No hotels found. <a href="{{ url_for('admin.create_hotel') }}">Create one now</a>
                         </td>
@@ -161,6 +315,259 @@
                 document.getElementById('dropdownMenu').classList.remove('show');
             }
         }
+        
+        // Flash message helper
+        function showFlash(message, type) {
+            const container = document.getElementById('flash-container');
+            const flash = document.createElement('div');
+            flash.className = `flash-message ${type}`;
+            flash.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(flash);
+            setTimeout(() => flash.remove(), 4000);
+        }
+        
+        // Edit Hotel Modal
+        function openEditHotelModal(id, name, address, city, kycEnabled, foodEnabled) {
+            document.getElementById('edit-hotel-id').value = id;
+            document.getElementById('edit-hotel-name').value = name;
+            document.getElementById('edit-hotel-address').value = address || '';
+            document.getElementById('edit-hotel-city').value = city || '';
+            document.getElementById('edit-kyc-enabled').checked = kycEnabled;
+            document.getElementById('edit-food-enabled').checked = foodEnabled;
+            document.getElementById('edit-hotel-modal').classList.add('show');
+        }
+        
+        function closeEditHotelModal() {
+            document.getElementById('edit-hotel-modal').classList.remove('show');
+        }
+        
+        function handleEditHotel(event) {
+            event.preventDefault();
+            
+            const hotelId = document.getElementById('edit-hotel-id').value;
+            const name = document.getElementById('edit-hotel-name').value.trim();
+            const address = document.getElementById('edit-hotel-address').value.trim();
+            const city = document.getElementById('edit-hotel-city').value.trim();
+            const kycEnabled = document.getElementById('edit-kyc-enabled').checked;
+            const foodEnabled = document.getElementById('edit-food-enabled').checked;
+            
+            if (!name) {
+                showFlash('Hotel name is required!', 'error');
+                return;
+            }
+            
+            if (!kycEnabled && !foodEnabled) {
+                showFlash('At least one module must be enabled!', 'error');
+                return;
+            }
+            
+            fetch('/admin/api/update-hotel', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    hotel_id: parseInt(hotelId),
+                    hotel_name: name,
+                    address: address,
+                    city: city,
+                    kyc_enabled: kycEnabled,
+                    food_enabled: foodEnabled
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showFlash(data.message, 'success');
+                    closeEditHotelModal();
+                    // Reload page to refresh the table
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showFlash(data.message || 'Error updating hotel', 'error');
+                }
+            })
+            .catch(error => {
+                showFlash('Error updating hotel', 'error');
+            });
+        }
+        
+        // Delete Hotel Modal
+        let deleteHotelId = null;
+        
+        function openDeleteHotelModal(id, name) {
+            deleteHotelId = id;
+            document.getElementById('delete-hotel-id').value = id;
+            document.getElementById('delete-hotel-name').textContent = name;
+            document.getElementById('delete-hotel-modal').classList.add('show');
+        }
+        
+        function closeDeleteHotelModal() {
+            document.getElementById('delete-hotel-modal').classList.remove('show');
+            deleteHotelId = null;
+        }
+        
+        function confirmDeleteHotel() {
+            if (!deleteHotelId) return;
+            
+            fetch('/admin/api/delete-hotel', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({hotel_id: deleteHotelId})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showFlash(data.message, 'success');
+                    closeDeleteHotelModal();
+                    // Reload page to refresh the table
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showFlash(data.message || 'Error deleting hotel', 'error');
+                }
+            })
+            .catch(error => {
+                showFlash('Error deleting hotel', 'error');
+            });
+        }
+        
+        // Add Balance Modal
+        let balanceHotelId = null;
+        
+        function openAddBalanceModal(id, name, currentBalance) {
+            balanceHotelId = id;
+            document.getElementById('balance-hotel-id').value = id;
+            document.getElementById('balance-hotel-name').textContent = name;
+            document.getElementById('current-balance').textContent = '₹' + parseFloat(currentBalance).toFixed(2);
+            document.getElementById('add-amount').value = '';
+            document.getElementById('add-description').value = '';
+            document.getElementById('add-balance-modal').classList.add('show');
+        }
+        
+        function closeAddBalanceModal() {
+            document.getElementById('add-balance-modal').classList.remove('show');
+            balanceHotelId = null;
+        }
+        
+        function confirmAddBalance() {
+            if (!balanceHotelId) return;
+            
+            const amount = parseFloat(document.getElementById('add-amount').value);
+            const description = document.getElementById('add-description').value || 'Balance added by Admin';
+            
+            if (!amount || amount <= 0) {
+                showFlash('Please enter a valid amount', 'error');
+                return;
+            }
+            
+            fetch('/wallet/api/add-balance', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    hotel_id: balanceHotelId,
+                    amount: amount,
+                    description: description
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showFlash(data.message + ' New balance: ₹' + data.new_balance.toFixed(2), 'success');
+                    closeAddBalanceModal();
+                    // Update the balance display
+                    const balanceEl = document.getElementById('balance-' + balanceHotelId);
+                    if (balanceEl) {
+                        balanceEl.textContent = '₹' + data.new_balance.toFixed(2);
+                        balanceEl.className = 'wallet-balance ' + (data.new_balance > 100 ? 'balance-good' : data.new_balance > 0 ? 'balance-low' : 'balance-zero');
+                    }
+                } else {
+                    showFlash(data.message || 'Error adding balance', 'error');
+                }
+            })
+            .catch(error => {
+                showFlash('Error adding balance', 'error');
+            });
+        }
+        
+        // Update Charges Modal
+        let chargesHotelId = null;
+        
+        function openUpdateChargesModal(id, name, verificationCharge, orderCharge) {
+            chargesHotelId = id;
+            document.getElementById('charges-hotel-id').value = id;
+            document.getElementById('charges-hotel-name').textContent = name;
+            document.getElementById('update-verification-charge').value = verificationCharge;
+            document.getElementById('update-order-charge').value = orderCharge;
+            document.getElementById('update-charges-modal').classList.add('show');
+        }
+        
+        function closeUpdateChargesModal() {
+            document.getElementById('update-charges-modal').classList.remove('show');
+            chargesHotelId = null;
+        }
+        
+        function confirmUpdateCharges() {
+            if (!chargesHotelId) return;
+            
+            const verificationCharge = parseFloat(document.getElementById('update-verification-charge').value) || 0;
+            const orderCharge = parseFloat(document.getElementById('update-order-charge').value) || 0;
+            
+            fetch('/wallet/api/update-charges', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    hotel_id: chargesHotelId,
+                    per_verification_charge: verificationCharge,
+                    per_order_charge: orderCharge
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showFlash(data.message, 'success');
+                    closeUpdateChargesModal();
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showFlash(data.message || 'Error updating charges', 'error');
+                }
+            })
+            .catch(error => {
+                showFlash('Error updating charges', 'error');
+            });
+        }
     </script>
+    
+    <style>
+        .wallet-balance {
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+        }
+        .balance-good {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        .balance-low {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        .balance-zero {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--gray);
+            color: var(--gray);
+        }
+        .btn-outline:hover {
+            background: var(--gray);
+            color: white;
+        }
+    </style>
 </body>
 </html>

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
 from admin.models import Admin, Manager
 from database.db import get_db_connection
 
@@ -77,6 +77,10 @@ def create_hotel():
 
         kyc_enabled = request.form.get("kyc") == "on"
         food_enabled = request.form.get("food") == "on"
+        
+        # Get pricing charges
+        per_verification_charge = float(request.form.get("per_verification_charge", 0) or 0)
+        per_order_charge = float(request.form.get("per_order_charge", 0) or 0)
 
         if not (kyc_enabled or food_enabled):
             flash("Please select at least one module", "error")
@@ -105,6 +109,10 @@ def create_hotel():
             conn.commit()
             cursor.close()
             conn.close()
+            
+            # Create wallet for the hotel with charges
+            from wallet.models import HotelWallet
+            HotelWallet.create_wallet(hotel_id, per_verification_charge, per_order_charge)
 
             flash("Hotel created successfully", "success")
             return redirect(url_for("admin.all_hotels"))
@@ -131,9 +139,14 @@ def all_hotels():
     cursor.execute("""
         SELECT 
             h.id, h.hotel_name, h.city,
-            hm.kyc_enabled, hm.food_enabled
+            hm.kyc_enabled, hm.food_enabled,
+            h.address,
+            COALESCE(hw.balance, 0) as wallet_balance,
+            COALESCE(hw.per_verification_charge, 0) as per_verification_charge,
+            COALESCE(hw.per_order_charge, 0) as per_order_charge
         FROM hotels h
         JOIN hotel_modules hm ON h.id = hm.hotel_id
+        LEFT JOIN hotel_wallet hw ON h.id = hw.hotel_id
         ORDER BY h.created_at DESC
     """)
 
@@ -141,6 +154,143 @@ def all_hotels():
     conn.close()
 
     return render_template("admin/all_hotels.html", hotels=hotels)
+
+
+@admin_bp.route("/api/update-hotel", methods=["POST"])
+def api_update_hotel():
+    """API endpoint to update hotel details (Admin only)"""
+    if "admin_id" not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    data = request.json
+    hotel_id = data.get("hotel_id")
+    hotel_name = data.get("hotel_name", "").strip()
+    address = data.get("address", "").strip()
+    city = data.get("city", "").strip()
+    kyc_enabled = data.get("kyc_enabled", False)
+    food_enabled = data.get("food_enabled", False)
+
+    if not hotel_id or not hotel_name:
+        return jsonify({"success": False, "message": "Hotel ID and name are required"})
+
+    if not kyc_enabled and not food_enabled:
+        return jsonify({"success": False, "message": "At least one module must be enabled"})
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Update hotel details
+        cursor.execute("""
+            UPDATE hotels 
+            SET hotel_name = %s, address = %s, city = %s
+            WHERE id = %s
+        """, (hotel_name, address, city, hotel_id))
+
+        # Update hotel modules
+        cursor.execute("""
+            UPDATE hotel_modules
+            SET kyc_enabled = %s, food_enabled = %s
+            WHERE hotel_id = %s
+        """, (kyc_enabled, food_enabled, hotel_id))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({"success": True, "message": "Hotel updated successfully"})
+
+    except Exception as e:
+        print(f"Error updating hotel: {e}")
+        return jsonify({"success": False, "message": f"Error updating hotel: {str(e)}"})
+
+
+@admin_bp.route("/api/delete-hotel", methods=["POST"])
+def api_delete_hotel():
+    """API endpoint to delete a hotel (Admin only)"""
+    if "admin_id" not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    data = request.json
+    hotel_id = data.get("hotel_id")
+
+    if not hotel_id:
+        return jsonify({"success": False, "message": "Hotel ID is required"})
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Check if hotel exists
+        cursor.execute("SELECT hotel_name FROM hotels WHERE id = %s", (hotel_id,))
+        hotel = cursor.fetchone()
+        if not hotel:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Hotel not found"})
+
+        # Delete in proper order to respect foreign key constraints
+        # 1. Delete waiter_table_assignments for waiters of this hotel
+        cursor.execute("""
+            DELETE wta FROM waiter_table_assignments wta
+            JOIN waiters w ON wta.waiter_id = w.id
+            WHERE w.hotel_id = %s
+        """, (hotel_id,))
+
+        # 2. Delete table_orders for tables of this hotel
+        cursor.execute("""
+            DELETE o FROM table_orders o
+            JOIN tables t ON o.table_id = t.id
+            WHERE t.hotel_id = %s
+        """, (hotel_id,))
+
+        # 3. Delete tables for this hotel
+        cursor.execute("DELETE FROM tables WHERE hotel_id = %s", (hotel_id,))
+
+        # 4. Delete waiters for this hotel
+        cursor.execute("DELETE FROM waiters WHERE hotel_id = %s", (hotel_id,))
+
+        # 5. Delete menu items for this hotel (via menu_categories)
+        cursor.execute("""
+            DELETE mi FROM menu_items mi
+            JOIN menu_categories mc ON mi.category_id = mc.id
+            WHERE mc.hotel_id = %s
+        """, (hotel_id,))
+
+        # 6. Delete menu categories for this hotel
+        cursor.execute("DELETE FROM menu_categories WHERE hotel_id = %s", (hotel_id,))
+
+        # 7. Delete KYC verifications for this hotel
+        cursor.execute("DELETE FROM kyc_verifications WHERE hotel_id = %s", (hotel_id,))
+
+        # 8. Delete hotel_managers assignment
+        cursor.execute("DELETE FROM hotel_managers WHERE hotel_id = %s", (hotel_id,))
+
+        # 9. Delete hotel_modules
+        cursor.execute("DELETE FROM hotel_modules WHERE hotel_id = %s", (hotel_id,))
+        
+        # 10. Delete wallet transactions for this hotel
+        cursor.execute("DELETE FROM wallet_transactions WHERE hotel_id = %s", (hotel_id,))
+        
+        # 11. Delete hotel wallet
+        cursor.execute("DELETE FROM hotel_wallet WHERE hotel_id = %s", (hotel_id,))
+
+        # 12. Finally delete the hotel
+        cursor.execute("DELETE FROM hotels WHERE id = %s", (hotel_id,))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({"success": True, "message": f"Hotel '{hotel[0]}' deleted successfully"})
+
+    except Exception as e:
+        print(f"Error deleting hotel: {e}")
+        try:
+            conn.rollback()
+        except:
+            pass
+        return jsonify({"success": False, "message": f"Error deleting hotel: {str(e)}"})
 
 
 @admin_bp.route("/edit-hotel/<int:hotel_id>", methods=["GET", "POST"])

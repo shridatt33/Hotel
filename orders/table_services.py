@@ -1,7 +1,7 @@
 import os
 import qrcode
 import uuid
-from .table_models import Table, TableOrder
+from .table_models import Table, TableOrder, Bill
 
 class TableService:
     @staticmethod
@@ -115,19 +115,116 @@ class TableService:
 
 class OrderService:
     @staticmethod
-    def create_order(table_id, items, session_id=None):
-        """Create new ACTIVE order and set table BUSY"""
+    def check_guest_access(table_id, guest_name):
+        """Check if a guest can access a table based on existing OPEN bills.
+        Returns view_only_mode=True if another guest has an open bill."""
         try:
+            table = Table.get_table_by_id(table_id)
+            if not table:
+                return {"success": False, "message": "Table not found", "can_order": False, "view_only_mode": False}
+            
+            if not guest_name or not guest_name.strip():
+                return {"success": False, "message": "Guest name is required", "can_order": False, "view_only_mode": False}
+            
+            guest_name = guest_name.strip()
+            
+            # Check for any OPEN bill on this table
+            existing_bill = Bill.get_any_open_bill_for_table(table_id)
+            
+            if not existing_bill:
+                # No open bill - table is available for anyone
+                return {
+                    "success": True, 
+                    "can_order": True,
+                    "view_only_mode": False,
+                    "message": "Table available",
+                    "is_returning_guest": False,
+                    "existing_bill": None
+                }
+            
+            # There's an open bill - check the guest name
+            existing_guest = existing_bill.get('guest_name')
+            
+            # If existing bill has NO guest_name (NULL/empty), treat table as available
+            # This handles orphaned bills from before guest name capture was implemented
+            if not existing_guest or not existing_guest.strip():
+                return {
+                    "success": True, 
+                    "can_order": True,
+                    "view_only_mode": False,
+                    "message": "Table available",
+                    "is_returning_guest": False,
+                    "existing_bill": None
+                }
+            
+            # Existing bill has a guest name - check if it matches
+            if existing_guest.lower().strip() == guest_name.lower():
+                # Same guest returning - allow full access
+                return {
+                    "success": True,
+                    "can_order": True,
+                    "view_only_mode": False,
+                    "message": "Welcome back! Your previous order is still open.",
+                    "is_returning_guest": True,
+                    "existing_bill": {
+                        "bill_id": existing_bill.get('id'),
+                        "bill_number": existing_bill.get('bill_number'),
+                        "total_amount": existing_bill.get('total_amount'),
+                        "items_count": len(existing_bill.get('items', []))
+                    },
+                    "session_id": existing_bill.get('session_id')
+                }
+            else:
+                # Different guest - VIEW ONLY MODE (can see menu but cannot order)
+                return {
+                    "success": True,
+                    "can_order": False,
+                    "view_only_mode": True,
+                    "message": f"This table is currently occupied by another guest. You can view the menu, but ordering is disabled until the current guest completes payment.",
+                    "is_returning_guest": False,
+                    "existing_bill": None,
+                    "occupied_by": existing_guest  # Don't show full name for privacy
+                }
+                
+        except Exception as e:
+            print(f"Error checking guest access: {e}")
+            return {"success": False, "message": "Server error", "can_order": False, "view_only_mode": False}
+    
+    @staticmethod
+    def create_order(table_id, items, session_id=None, guest_name=None):
+        """Create new ACTIVE order and set table BUSY - with guest name-based bill grouping"""
+        try:
+            from orders.table_models import ActiveTable
+            
             table = Table.get_table_by_id(table_id)
             if not table:
                 return {"success": False, "message": "Table not found"}
             
-            current_session_id = table.get('current_session_id')
-            hotel_id = table.get('hotel_id')  # Get hotel_id from table
-
-            if table['status'] == 'BUSY':
-                if not session_id or session_id != current_session_id:
-                    return {"success": False, "message": "Table is currently busy"}
+            hotel_id = table.get('hotel_id')
+            
+            # Validate guest name is provided
+            if not guest_name or not guest_name.strip():
+                return {"success": False, "message": "Guest name is required"}
+            
+            guest_name = guest_name.strip()
+            
+            # Check for existing OPEN bill on this table
+            existing_bill = Bill.get_any_open_bill_for_table(table_id)
+            
+            if existing_bill:
+                existing_guest = existing_bill.get('guest_name', '')
+                
+                # Allow only if same guest (case-insensitive)
+                if existing_guest and existing_guest.lower() == guest_name.lower():
+                    # Same guest - use their existing session and preserve their original name case
+                    session_id = existing_bill.get('session_id')
+                    guest_name = existing_guest  # Preserve original case
+                else:
+                    # Different guest - deny access
+                    return {
+                        "success": False, 
+                        "message": f"Table is currently busy with another guest. Please wait for them to finish."
+                    }
 
             if not session_id:
                 session_id = str(uuid.uuid4())
@@ -135,18 +232,28 @@ class OrderService:
             # Calculate total
             total_amount = sum(item['price'] * item['quantity'] for item in items)
             
-            # Add ACTIVE order (automatically sets table BUSY) - include hotel_id
-            order_id, error_message = TableOrder.add_order(table_id, session_id, items, total_amount, hotel_id)
+            # Add ACTIVE order with guest_name
+            order_id, error_message = TableOrder.add_order(table_id, session_id, items, total_amount, hotel_id, guest_name)
             if not order_id:
                 if error_message:
                     return {"success": False, "message": f"Failed to create order: {error_message}"}
                 return {"success": False, "message": "Failed to create order"}
             
+            # Create or update bill for this guest (same guest + same table = same bill)
+            bill_info = Bill.create_bill(order_id, table_id, session_id, items, total_amount, hotel_id, guest_name)
+            
+            # Create or update Active Table entry (links table to open bill)
+            if bill_info:
+                bill_id = bill_info.get('bill_id')
+                ActiveTable.create_or_get_active_entry(table_id, bill_id, guest_name, session_id, hotel_id)
+            
             return {
                 "success": True,
                 "message": "Order created successfully",
                 "order_id": order_id,
-                "session_id": session_id
+                "session_id": session_id,
+                "guest_name": guest_name,
+                "bill": bill_info
             }
         except Exception as e:
             print(f"Error creating order: {e}")
@@ -154,10 +261,39 @@ class OrderService:
     
     @staticmethod
     def complete_order(order_id):
-        """Complete order and set table AVAILABLE immediately"""
+        """Complete order (mark as served). Bill stays OPEN until payment."""
         try:
+            # Get hotel_id from order before completing
+            from database.db import get_db_connection
+            connection = get_db_connection()
+            cursor = connection.cursor(dictionary=True)
+            cursor.execute("SELECT hotel_id FROM table_orders WHERE id = %s", (order_id,))
+            order_data = cursor.fetchone()
+            cursor.close()
+            connection.close()
+            
+            hotel_id = order_data.get('hotel_id') if order_data else None
+            
+            # Check wallet balance before completing order
+            if hotel_id:
+                from wallet.models import HotelWallet
+                balance_check = HotelWallet.check_balance_for_order(hotel_id)
+                if not balance_check.get('sufficient', True):
+                    return {
+                        "success": False, 
+                        "message": f"Cannot complete order: Insufficient wallet balance. Required: ₹{balance_check.get('charge', 0):.2f}, Available: ₹{balance_check.get('balance', 0):.2f}. Please add balance first.",
+                        "insufficient_balance": True
+                    }
+            
             if TableOrder.complete_order(order_id):
-                return {"success": True, "message": "Order completed. Table is now available."}
+                # Deduct wallet balance ONLY when order is COMPLETED
+                if hotel_id:
+                    from wallet.models import HotelWallet
+                    deduct_result = HotelWallet.deduct_for_order(hotel_id, order_id)
+                    if not deduct_result.get('success') and deduct_result.get('insufficient_balance'):
+                        print(f"Warning: Could not deduct order charge: {deduct_result.get('message')}")
+                
+                return {"success": True, "message": "Order marked as completed (served). Bill stays open until payment."}
             else:
                 return {"success": False, "message": "Failed to complete order"}
         except Exception as e:
@@ -176,29 +312,56 @@ class OrderService:
 
     @staticmethod
     def complete_payment(table_id, session_id):
-        """Complete payment and end table session"""
+        """Complete payment and end table session - This is called AFTER payment is confirmed"""
         try:
+            from orders.table_models import ActiveTable
+            
             table = Table.get_table_by_id(table_id)
             if not table:
                 return {"success": False, "message": "Table not found"}
 
-            current_session_id = table.get('current_session_id')
-            if not current_session_id or current_session_id != session_id:
-                return {"success": False, "message": "Invalid session"}
+            # Validate session by checking for OPEN bill instead of table.current_session_id
+            open_bill = Bill.get_any_open_bill_for_table(table_id)
+            
+            if not open_bill:
+                return {"success": False, "message": "No open bill found for this table"}
+            
+            # Use the bill's session_id if the provided one doesn't match
+            bill_session_id = open_bill.get('session_id')
+            if bill_session_id and bill_session_id != session_id:
+                session_id = bill_session_id
 
             from database.db import get_db_connection
+            import datetime
             connection = get_db_connection()
             cursor = connection.cursor()
+            
+            paid_at = datetime.datetime.now()
 
+            # Mark all orders as COMPLETED (served)
             cursor.execute(
                 "UPDATE table_orders SET order_status = 'COMPLETED' WHERE table_id = %s AND session_id = %s",
                 (table_id, session_id)
             )
 
+            # Mark bill as COMPLETED and PAID - THIS is where bill closure happens
             cursor.execute(
-                "UPDATE tables SET status = 'AVAILABLE', current_session_id = NULL WHERE id = %s",
+                "UPDATE bills SET bill_status = 'COMPLETED', payment_status = 'PAID', paid_at = %s WHERE table_id = %s AND session_id = %s AND bill_status = 'OPEN'",
+                (paid_at, table_id, session_id)
+            )
+
+            # Release the table
+            cursor.execute(
+                "UPDATE tables SET status = 'AVAILABLE', current_session_id = NULL, current_guest_name = NULL WHERE id = %s",
                 (table_id,)
             )
+            
+            # Close the active table entry (CRITICAL: payment closes active table)
+            cursor.execute("""
+                UPDATE active_tables 
+                SET status = 'CLOSED', closed_at = %s
+                WHERE table_id = %s AND status = 'ACTIVE'
+            """, (paid_at, table_id))
 
             connection.commit()
             cursor.close()
@@ -207,6 +370,18 @@ class OrderService:
             return {"success": True, "message": "Payment completed. Table is now available."}
         except Exception as e:
             print(f"Error completing payment: {e}")
+            return {"success": False, "message": "Server error"}
+
+    @staticmethod
+    def complete_bill(bill_id):
+        """Complete a bill - lock it and free table if needed"""
+        try:
+            if Bill.complete_bill(bill_id):
+                return {"success": True, "message": "Bill completed. Table is now available."}
+            else:
+                return {"success": False, "message": "Failed to complete bill"}
+        except Exception as e:
+            print(f"Error completing bill: {e}")
             return {"success": False, "message": "Server error"}
 
     @staticmethod

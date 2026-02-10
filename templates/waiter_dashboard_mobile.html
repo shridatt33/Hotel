@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>Waiter Dashboard - HotelEase</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='waiter_mobile.css') }}">
+</head>
+<body>
+    <!-- Mobile App Container -->
+    <div class="mobile-app">
+        
+        <!-- Compact Top Bar -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="waiter-avatar">{{ waiter_name[:1]|upper if waiter_name else 'W' }}</div>
+                <div class="waiter-info">
+                    <span class="waiter-name">{{ waiter_name }}</span>
+                    <span class="hotel-name">{{ hotel_name }}</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn" onclick="refreshAll()" id="refreshBtn">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <a href="/" class="icon-btn logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Scrollable Content -->
+        <main class="app-content">
+            
+            <!-- Quick Stats Row -->
+            <div class="quick-stats">
+                <div class="stat-pill active-stat" onclick="scrollToSection('active-orders')">
+                    <i class="fas fa-fire"></i>
+                    <span id="activeCount">{{ active_count }}</span>
+                    <label>Active</label>
+                </div>
+                <div class="stat-pill preparing-stat" onclick="scrollToSection('preparing-orders')">
+                    <i class="fas fa-clock"></i>
+                    <span id="preparingCount">{{ preparing_count }}</span>
+                    <label>Preparing</label>
+                </div>
+                <div class="stat-pill completed-stat" onclick="scrollToSection('completed-orders')">
+                    <i class="fas fa-check"></i>
+                    <span id="completedCount">{{ completed_count }}</span>
+                    <label>Done</label>
+                </div>
+                <div class="stat-pill tables-stat" onclick="scrollToSection('my-tables')">
+                    <i class="fas fa-chair"></i>
+                    <span id="tablesCount">{{ tables|length }}</span>
+                    <label>Tables</label>
+                </div>
+            </div>
+
+            <!-- My Tables Section -->
+            <section class="card-section" id="my-tables">
+                <div class="section-header">
+                    <h2><i class="fas fa-chair"></i> My Tables</h2>
+                    <span class="badge">{{ tables|length }} assigned</span>
+                </div>
+                <div class="tables-scroll">
+                    {% for table in tables %}
+                    <div class="table-chip {{ 'occupied' if table.status == 'occupied' else 'available' }}">
+                        <div class="table-number">T{{ table.table_number }}</div>
+                        <div class="table-status">
+                            {% if table.status == 'occupied' %}
+                            <i class="fas fa-user"></i> Occupied
+                            {% else %}
+                            <i class="fas fa-check"></i> Free
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Active Orders Section -->
+            <section class="card-section" id="active-orders">
+                <div class="section-header">
+                    <h2><i class="fas fa-fire"></i> Active Orders</h2>
+                    <span class="badge badge-danger" id="activeBadge">{{ active_count }}</span>
+                </div>
+                <div class="orders-list" id="activeOrdersList">
+                    <!-- Orders will be loaded dynamically -->
+                    <div class="loading-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading orders...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Preparing Orders Section -->
+            <section class="card-section" id="preparing-orders">
+                <div class="section-header">
+                    <h2><i class="fas fa-clock"></i> Preparing</h2>
+                    <span class="badge badge-warning" id="preparingBadge">{{ preparing_count }}</span>
+                </div>
+                <div class="orders-list" id="preparingOrdersList">
+                    <!-- Orders will be loaded dynamically -->
+                    <div class="loading-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading orders...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Completed Orders Section -->
+            <section class="card-section collapsed" id="completed-orders">
+                <div class="section-header" onclick="toggleSection('completed-orders')">
+                    <h2><i class="fas fa-check-circle"></i> Completed Today</h2>
+                    <div class="section-toggle">
+                        <span class="badge badge-success" id="completedBadge">{{ completed_count }}</span>
+                        <i class="fas fa-chevron-down toggle-icon"></i>
+                    </div>
+                </div>
+                <div class="orders-list collapsible-content" id="completedOrdersList">
+                    <!-- Orders will be loaded dynamically -->
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section class="card-section collapsed" id="settings-section">
+                <div class="section-header" onclick="toggleSection('settings-section')">
+                    <h2><i class="fas fa-cog"></i> Settings</h2>
+                    <i class="fas fa-chevron-down toggle-icon"></i>
+                </div>
+                <div class="settings-content collapsible-content">
+                    <div class="settings-item">
+                        <div class="setting-info">
+                            <i class="fas fa-user"></i>
+                            <div>
+                                <label>Name</label>
+                                <span>{{ waiter_name }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-item">
+                        <div class="setting-info">
+                            <i class="fas fa-id-badge"></i>
+                            <div>
+                                <label>Waiter ID</label>
+                                <span>{{ waiter_id }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-item">
+                        <div class="setting-info">
+                            <i class="fas fa-hotel"></i>
+                            <div>
+                                <label>Hotel</label>
+                                <span>{{ hotel_name }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="action-btn full-width" onclick="showChangePassword()">
+                        <i class="fas fa-key"></i> Change Password
+                    </button>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Bottom Quick Actions Bar -->
+        <nav class="bottom-actions">
+            <button class="action-card" onclick="scrollToSection('active-orders')">
+                <div class="action-icon active-icon">
+                    <i class="fas fa-fire"></i>
+                </div>
+                <span>Active</span>
+                <div class="action-badge" id="activeActionBadge">{{ active_count }}</div>
+            </button>
+            <button class="action-card" onclick="scrollToSection('preparing-orders')">
+                <div class="action-icon preparing-icon">
+                    <i class="fas fa-utensils"></i>
+                </div>
+                <span>Preparing</span>
+                <div class="action-badge warning" id="preparingActionBadge">{{ preparing_count }}</div>
+            </button>
+            <button class="action-card" onclick="refreshAll()">
+                <div class="action-icon refresh-icon">
+                    <i class="fas fa-sync-alt"></i>
+                </div>
+                <span>Refresh</span>
+            </button>
+            <button class="action-card" onclick="scrollToSection('my-tables')">
+                <div class="action-icon tables-icon">
+                    <i class="fas fa-chair"></i>
+                </div>
+                <span>Tables</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div class="modal-overlay" id="orderModal">
+        <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <div class="modal-header">
+                <h3 id="modalTitle">Order Details</h3>
+                <button class="close-btn" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Dynamic content -->
+            </div>
+            <div class="modal-actions" id="modalActions">
+                <!-- Dynamic buttons -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Bill Modal -->
+    <div class="bill-overlay" id="billModal" style="display: none;">
+        <div class="bill-sheet">
+            <div class="modal-handle"></div>
+            <div class="bill-header">
+                <h3><i class="fas fa-receipt"></i> Bill Details</h3>
+                <button class="close-btn" onclick="closeBillModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="bill-body" id="billBody">
+                <!-- Dynamic content -->
+            </div>
+            <div class="bill-footer" id="billFooter">
+                <!-- Dynamic buttons -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <div class="modal-header">
+                <h3><i class="fas fa-key"></i> Change Password</h3>
+                <button class="close-btn" onclick="closePasswordModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="passwordForm" onsubmit="changePassword(event)">
+                    <div class="form-group">
+                        <label>Current Password</label>
+                        <input type="password" id="currentPassword" required placeholder="Enter current password">
+                    </div>
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input type="password" id="newPassword" required placeholder="Enter new password">
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm Password</label>
+                        <input type="password" id="confirmPassword" required placeholder="Confirm new password">
+                    </div>
+                    <button type="submit" class="action-btn primary full-width">
+                        <i class="fas fa-save"></i> Update Password
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <i class="toast-icon fas fa-check-circle"></i>
+        <span class="toast-message">Success!</span>
+    </div>
+
+    <script>
+        // ============================================
+        // GLOBAL STATE
+        // ============================================
+        let autoRefreshInterval;
+        const REFRESH_INTERVAL = 30000; // 30 seconds
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAllOrders();
+            startAutoRefresh();
+        });
+
+        // ============================================
+        // SECTION NAVIGATION
+        // ============================================
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                // Expand if collapsed
+                if (section.classList.contains('collapsed')) {
+                    toggleSection(sectionId);
+                }
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.classList.toggle('collapsed');
+                const icon = section.querySelector('.toggle-icon');
+                if (icon) {
+                    icon.style.transform = section.classList.contains('collapsed') ? 'rotate(0deg)' : 'rotate(180deg)';
+                }
+            }
+        }
+
+        // ============================================
+        // DATA LOADING
+        // ============================================
+        async function loadAllOrders() {
+            await Promise.all([
+                loadActiveOrders(),
+                loadPreparingOrders(),
+                loadCompletedOrders()
+            ]);
+        }
+
+        async function loadActiveOrders() {
+            try {
+                const response = await fetch('/waiter/api/orders?status=ACTIVE');
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderOrders('activeOrdersList', data.orders, 'active');
+                    updateCount('activeCount', data.orders.length);
+                    updateCount('activeBadge', data.orders.length);
+                    updateCount('activeActionBadge', data.orders.length);
+                }
+            } catch (error) {
+                console.error('Error loading active orders:', error);
+                showToast('Failed to load active orders', 'error');
+            }
+        }
+
+        async function loadPreparingOrders() {
+            try {
+                const response = await fetch('/waiter/api/orders?status=PREPARING');
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderOrders('preparingOrdersList', data.orders, 'preparing');
+                    updateCount('preparingCount', data.orders.length);
+                    updateCount('preparingBadge', data.orders.length);
+                    updateCount('preparingActionBadge', data.orders.length);
+                }
+            } catch (error) {
+                console.error('Error loading preparing orders:', error);
+                showToast('Failed to load preparing orders', 'error');
+            }
+        }
+
+        async function loadCompletedOrders() {
+            try {
+                const response = await fetch('/waiter/api/orders?status=COMPLETED');
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderOrders('completedOrdersList', data.orders, 'completed');
+                    updateCount('completedCount', data.orders.length);
+                    updateCount('completedBadge', data.orders.length);
+                }
+            } catch (error) {
+                console.error('Error loading completed orders:', error);
+            }
+        }
+
+        function updateCount(elementId, count) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.textContent = count;
+                // Add pulse animation for non-zero counts
+                if (count > 0) {
+                    el.classList.add('has-count');
+                } else {
+                    el.classList.remove('has-count');
+                }
+            }
+        }
+
+        // ============================================
+        // ORDER RENDERING
+        // ============================================
+        function renderOrders(containerId, orders, type) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            if (orders.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-${type === 'active' ? 'fire-alt' : type === 'preparing' ? 'utensils' : 'clipboard-check'}"></i>
+                        <p>No ${type} orders</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = orders.map(order => createOrderCard(order, type)).join('');
+        }
+
+        function createOrderCard(order, type) {
+            const status = order.status || order.order_status || 'pending';
+            const statusClass = getStatusClass(status);
+            const timeAgo = getTimeAgo(order.created_at);
+            const paymentStatus = order.payment_status || 'pending';
+            const orderId = order.id || order.order_id;
+            const items = order.items || [];
+            const totalAmount = order.total_amount || order.total || 0;
+            
+            let actionButtons = '';
+            const upperStatus = status.toUpperCase();
+            if (type === 'active' || upperStatus === 'ACTIVE') {
+                actionButtons = `
+                    <button class="order-action-btn preparing" onclick="updateStatus(${orderId}, 'PREPARING')">
+                        <i class="fas fa-clock"></i> Start Preparing
+                    </button>
+                `;
+            } else if (type === 'preparing' || upperStatus === 'PREPARING') {
+                actionButtons = `
+                    <button class="order-action-btn complete" onclick="updateStatus(${orderId}, 'COMPLETED')">
+                        <i class="fas fa-check"></i> Mark Complete
+                    </button>
+                `;
+            }
+
+            return `
+                <div class="order-card ${statusClass}" onclick="showOrderDetails(${orderId})">
+                    <div class="order-card-header">
+                        <div class="order-info">
+                            <span class="table-badge">T${order.table_number}</span>
+                            <span class="order-id">#${orderId}</span>
+                        </div>
+                        <div class="order-badges">
+                            <span class="status-badge ${statusClass}">${status}</span>
+                            <span class="payment-badge ${paymentStatus}">${paymentStatus}</span>
+                        </div>
+                    </div>
+                    <div class="order-card-body">
+                        <div class="order-items">
+                            ${items.length > 0 ? items.slice(0, 3).map(item => 
+                                `<span class="item-tag">${item.quantity}× ${item.name || item.item_name}</span>`
+                            ).join('') : '<span class="item-tag">No items</span>'}
+                            ${items.length > 3 ? `<span class="item-tag more">+${items.length - 3} more</span>` : ''}
+                        </div>
+                        <div class="order-meta">
+                            <span class="order-time"><i class="fas fa-clock"></i> ${timeAgo}</span>
+                            <span class="order-total">₹${totalAmount}</span>
+                        </div>
+                    </div>
+                    ${actionButtons ? `<div class="order-card-actions" onclick="event.stopPropagation()">${actionButtons}</div>` : ''}
+                </div>
+            `;
+        }
+
+        function getStatusClass(status) {
+            switch(status?.toUpperCase()) {
+                case 'PENDING': return 'status-pending';
+                case 'CONFIRMED': return 'status-confirmed';
+                case 'ACTIVE': return 'status-pending';
+                case 'PREPARING': return 'status-preparing';
+                case 'COMPLETED': return 'status-completed';
+                case 'CANCELLED': return 'status-cancelled';
+                default: return 'status-pending';
+            }
+        }
+
+        function getTimeAgo(dateStr) {
+            if (!dateStr) return 'Just now';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours < 24) return `${diffHours}h ago`;
+            return `${Math.floor(diffHours / 24)}d ago`;
+        }
+
+        // ============================================
+        // ORDER ACTIONS
+        // ============================================
+        async function updateStatus(orderId, newStatus) {
+            try {
+                const response = await fetch(`/waiter/api/orders/${orderId}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus.toUpperCase() })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showToast(`Order #${orderId} marked as ${newStatus}`, 'success');
+                    await loadAllOrders();
+                } else {
+                    showToast(data.message || 'Failed to update order', 'error');
+                }
+            } catch (error) {
+                console.error('Error updating status:', error);
+                showToast('Failed to update order status', 'error');
+            }
+        }
+
+        async function showOrderDetails(orderId) {
+            try {
+                // Fetch all orders and find the specific one
+                const response = await fetch('/waiter/api/orders');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const order = data.orders.find(o => o.id === orderId || o.order_id === orderId);
+                    if (!order) {
+                        showToast('Order not found', 'error');
+                        return;
+                    }
+                    
+                    document.getElementById('modalTitle').innerHTML = `
+                        <span class="table-badge large">T${order.table_number}</span>
+                        Order #${order.id || order.order_id}
+                    `;
+                    
+                    const status = order.status || order.order_status || 'pending';
+                    const items = order.items || [];
+                    const totalAmount = order.total_amount || order.total || 0;
+                    
+                    document.getElementById('modalBody').innerHTML = `
+                        <div class="order-detail-section">
+                            <div class="detail-row">
+                                <span class="label">Status</span>
+                                <span class="status-badge ${getStatusClass(status)}">${status}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Payment</span>
+                                <span class="payment-badge ${order.payment_status || 'pending'}">${order.payment_status || 'Pending'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Time</span>
+                                <span>${getTimeAgo(order.created_at)}</span>
+                            </div>
+                        </div>
+                        <div class="items-section">
+                            <h4>Items</h4>
+                            <div class="items-list">
+                                ${items.length > 0 ? items.map(item => `
+                                    <div class="item-row">
+                                        <span class="qty">${item.quantity}×</span>
+                                        <span class="name">${item.name || item.item_name}</span>
+                                        <span class="price">₹${(item.price || 0) * item.quantity}</span>
+                                    </div>
+                                `).join('') : '<p>No items</p>'}
+                            </div>
+                        </div>
+                        <div class="total-section">
+                            <div class="total-row grand">
+                                <span>Total</span>
+                                <span>₹${totalAmount}</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    let actions = `<button class="action-btn secondary" onclick="viewBill(${order.table_id || 0})"><i class="fas fa-receipt"></i> View Bill</button>`;
+                    
+                    const orderStatus = (status || '').toUpperCase();
+                    if (orderStatus === 'ACTIVE' || orderStatus === 'PENDING' || orderStatus === 'CONFIRMED') {
+                        actions += `<button class="action-btn warning" onclick="updateStatus(${order.id || order.order_id}, 'PREPARING'); closeModal();"><i class="fas fa-clock"></i> Preparing</button>`;
+                    } else if (orderStatus === 'PREPARING') {
+                        actions += `<button class="action-btn success" onclick="updateStatus(${order.id || order.order_id}, 'COMPLETED'); closeModal();"><i class="fas fa-check"></i> Complete</button>`;
+                    }
+                    
+                    document.getElementById('modalActions').innerHTML = actions;
+                    openModal();
+                }
+            } catch (error) {
+                console.error('Error fetching order details:', error);
+                showToast('Failed to load order details', 'error');
+            }
+        }
+
+        async function viewBill(tableId) {
+            // For now, show a message since bill viewing needs table-specific implementation
+            // The waiter can see bills through order details
+            showToast('Bill feature coming soon', 'info');
+            closeModal();
+        }
+
+        function printBill(billId) {
+            showToast('Print feature coming soon', 'info');
+        }
+
+        // ============================================
+        // MODAL FUNCTIONS
+        // ============================================
+        function openModal() {
+            document.getElementById('orderModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('orderModal').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        function closeBillModal() {
+            document.getElementById('billModal').style.display = 'none';
+        }
+
+        function showChangePassword() {
+            document.getElementById('passwordModal').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').classList.remove('show');
+            document.body.style.overflow = '';
+            document.getElementById('passwordForm').reset();
+        }
+
+        // ============================================
+        // PASSWORD CHANGE
+        // ============================================
+        async function changePassword(e) {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                showToast('Passwords do not match', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/waiter/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ old_password: currentPassword, new_password: newPassword })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    showToast('Password changed successfully', 'success');
+                    closePasswordModal();
+                } else {
+                    showToast(data.message || 'Failed to change password', 'error');
+                }
+            } catch (error) {
+                showToast('Error changing password', 'error');
+            }
+        }
+
+        // ============================================
+        // REFRESH & AUTO-REFRESH
+        // ============================================
+        function refreshAll() {
+            const btn = document.getElementById('refreshBtn');
+            btn.classList.add('spinning');
+            
+            loadAllOrders().then(() => {
+                setTimeout(() => btn.classList.remove('spinning'), 500);
+                showToast('Data refreshed', 'success');
+            });
+        }
+
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(loadAllOrders, REFRESH_INTERVAL);
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        }
+
+        // ============================================
+        // TOAST NOTIFICATIONS
+        // ============================================
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = toast.querySelector('.toast-icon');
+            const msg = toast.querySelector('.toast-message');
+            
+            icon.className = 'toast-icon fas ' + (type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle');
+            toast.className = 'toast ' + type;
+            msg.textContent = message;
+            
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // ============================================
+        // LOGOUT
+        // ============================================
+        function logout() {
+            stopAutoRefresh();
+            window.location.href = '/';
+        }
+
+        // Close modals on backdrop click
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('show');
+                    document.body.style.overflow = '';
+                }
+            });
+        });
+
+        // Handle swipe down to close modals
+        let touchStartY = 0;
+        document.querySelectorAll('.modal-sheet, .bill-sheet').forEach(sheet => {
+            sheet.addEventListener('touchstart', e => {
+                touchStartY = e.touches[0].clientY;
+            });
+            sheet.addEventListener('touchend', e => {
+                const touchEndY = e.changedTouches[0].clientY;
+                if (touchEndY - touchStartY > 100) {
+                    sheet.closest('.modal-overlay, .bill-overlay').classList.remove('show');
+                    if (sheet.closest('.bill-overlay')) {
+                        sheet.closest('.bill-overlay').style.display = 'none';
+                    }
+                    document.body.style.overflow = '';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
