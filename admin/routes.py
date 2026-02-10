@@ -1,8 +1,28 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
 from admin.models import Admin, Manager
 from database.db import get_db_connection
+from datetime import datetime
 
 admin_bp = Blueprint("admin", __name__)
+
+# =========================
+# REUSABLE ACTIVITY LOGGER
+# =========================
+
+def log_activity(activity_type, message):
+    """Reusable function to log activities safely"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO recent_activities (activity_type, message) VALUES (%s, %s)",
+            (activity_type, message)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception:
+        pass  # Fail silently to not break main operations
 
 # =========================
 # AUTH
@@ -34,6 +54,29 @@ def dashboard():
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    # Ensure recent_activities table exists
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS recent_activities (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            activity_type VARCHAR(50) NOT NULL,
+            message TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    """)
+
+    # Clean old activities (older than 3 days)
+    cursor.execute("DELETE FROM recent_activities WHERE created_at < NOW() - INTERVAL 3 DAY")
+    conn.commit()
+
+    # TOTAL HOTELS
+    cursor.execute("SELECT COUNT(*) FROM hotels")
+    total_hotels = cursor.fetchone()[0]
+
+    # TOTAL MANAGERS
+    cursor.execute("SELECT COUNT(*) FROM managers")
+    total_managers = cursor.fetchone()[0]
+
     # TOTAL KYC VERIFICATIONS
     cursor.execute("SELECT COUNT(*) FROM kyc_verifications")
     total_kyc = cursor.fetchone()[0]
@@ -45,12 +88,24 @@ def dashboard():
     """)
     today_kyc = cursor.fetchone()[0]
 
+    # FETCH RECENT ACTIVITIES (latest 5)
+    cursor.execute("""
+        SELECT activity_type, message, created_at
+        FROM recent_activities
+        ORDER BY created_at DESC
+        LIMIT 5
+    """)
+    recent_activities = cursor.fetchall()
+
     conn.close()
 
     return render_template(
         "admin/admin_dashboard.html",
+        total_hotels=total_hotels,
+        total_managers=total_managers,
         total_kyc=total_kyc,
-        today_kyc=today_kyc
+        today_kyc=today_kyc,
+        recent_activities=recent_activities
     )
 
 
@@ -106,6 +161,9 @@ def create_hotel():
                 (hotel_id, kyc_enabled, food_enabled)
             )
 
+            # Log activity
+            log_activity('hotel', f"Hotel '{hotel_name}' was created")
+
             conn.commit()
             cursor.close()
             conn.close()
@@ -115,7 +173,7 @@ def create_hotel():
             HotelWallet.create_wallet(hotel_id, per_verification_charge, per_order_charge)
 
             flash("Hotel created successfully", "success")
-            return redirect(url_for("admin.all_hotels"))
+            return redirect(url_for("admin.dashboard"))
 
         except Exception as e:
             try:
@@ -333,6 +391,49 @@ def edit_hotel_modules(hotel_id):
     return render_template("admin/edit_hotel_modules.html", hotel=hotel, hotel_id=hotel_id)
 
 
+@admin_bp.route("/delete-hotel/<int:hotel_id>", methods=["POST"])
+def delete_hotel(hotel_id):
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get hotel name before deletion
+        cursor.execute("SELECT hotel_name FROM hotels WHERE id = %s", (hotel_id,))
+        hotel = cursor.fetchone()
+        hotel_name = hotel[0] if hotel else "Unknown"
+        
+        # Delete related records first (handle foreign key constraints)
+        cursor.execute("DELETE FROM hotel_managers WHERE hotel_id = %s", (hotel_id,))
+        cursor.execute("DELETE FROM hotel_modules WHERE hotel_id = %s", (hotel_id,))
+        cursor.execute("DELETE FROM kyc_verifications WHERE hotel_id = %s", (hotel_id,))
+        cursor.execute("DELETE FROM menu_categories WHERE hotel_id = %s", (hotel_id,))
+        cursor.execute("DELETE FROM menu_dishes WHERE hotel_id = %s", (hotel_id,))
+        cursor.execute("DELETE FROM waiters WHERE hotel_id = %s", (hotel_id,))
+        
+        # Delete the hotel
+        cursor.execute("DELETE FROM hotels WHERE id = %s", (hotel_id,))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # Log activity
+        log_activity('hotel', f"Hotel '{hotel_name}' was deleted")
+        
+        flash(f"Hotel '{hotel_name}' deleted successfully!", "success")
+    except Exception as e:
+        try:
+            conn.rollback()
+        except:
+            pass
+        flash(f"Error deleting hotel: {str(e)}", "error")
+    
+    return redirect(url_for("admin.all_hotels"))
+
+
 # =========================
 # MANAGER MANAGEMENT (STEP 5 FIXED)
 # =========================
@@ -379,9 +480,12 @@ def add_manager():
                 (hotel_id, manager_id)
             )
 
+            # Log activity
+            log_activity('manager', f"Manager '{name}' was added")
+
             conn.commit()
             flash("Manager added and assigned to hotel successfully!", "success")
-            return redirect(url_for("admin.all_managers"))
+            return redirect(url_for("admin.dashboard"))
 
         except Exception as e:
             conn.rollback()
@@ -462,7 +566,15 @@ def delete_manager(manager_id):
         return redirect(url_for("admin.login"))
     
     try:
+        # Get manager name before deletion
+        manager = Manager.get_manager_by_id(manager_id)
+        manager_name = manager[1] if manager else "Unknown"
+        
         Manager.delete_manager(manager_id)
+        
+        # Log activity
+        log_activity('manager', f"Manager '{manager_name}' was removed")
+        
         flash("Manager deleted successfully!", "success")
     except Exception as e:
         flash("Error deleting manager", "error")
@@ -501,3 +613,53 @@ def change_password():
             flash("Error updating password", "error")
     
     return render_template("admin/change_password.html")
+
+# =========================
+# API ENDPOINTS
+# =========================
+
+@admin_bp.route("/api/recent-activities")
+def get_recent_activities():
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Ensure table exists
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS recent_activities (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                activity_type VARCHAR(50) NOT NULL,
+                message TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_created_at (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """)
+
+        # Delete activities older than 3 days
+        cursor.execute("DELETE FROM recent_activities WHERE created_at < NOW() - INTERVAL 3 DAY")
+        conn.commit()
+
+        # Fetch latest 5 activities
+        cursor.execute("""
+            SELECT activity_type, message, created_at
+            FROM recent_activities
+            ORDER BY created_at DESC
+            LIMIT 5
+        """)
+        activities = cursor.fetchall()
+        conn.close()
+
+        result = []
+        for activity in activities:
+            result.append({
+                "activity_type": activity[0],
+                "message": activity[1],
+                "created_at": activity[2].strftime("%Y-%m-%d %H:%M:%S")
+            })
+
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -33,8 +33,8 @@ def get_db_connection():
         host=os.getenv("MYSQL_HOST", "localhost"),
         port=int(os.getenv("MYSQL_PORT", "3306")),
         user=os.getenv("MYSQL_USER", "root"),
-        password=os.getenv("MYSQL_PASSWORD", "Dattu@1234"),
-        database=os.getenv("MYSQL_DATABASE", "hotelease"),
+        password=os.getenv("MYSQL_PASSWORD", "mysql123"),
+        database=os.getenv("MYSQL_DATABASE", "test"),
     )
 
 def init_db():
@@ -341,7 +341,7 @@ def create_hotel_redirect():
     code = 307 if request.method == "POST" else 302
     return redirect(url_for("admin.create_hotel"), code=code)
 
-if os.getenv("SKIP_DB_INIT") != "1":
+if os.getenv("ENABLE_DB_INIT") == "1":
     init_db()  # Initialize database tables on startup
 
 if __name__ == "__main__":

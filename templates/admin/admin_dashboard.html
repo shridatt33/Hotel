@@ -72,13 +72,6 @@
             <h1>Admin Dashboard</h1>
         </div>
         <div class="header-right">
-            <div class="header-icon">
-                <i class="fas fa-bell"></i>
-                <span class="badge">3</span>
-            </div>
-            <div class="header-icon">
-                <i class="fas fa-envelope"></i>
-            </div>
             <div class="profile-dropdown">
                 <div class="profile-btn" onclick="toggleDropdown()">
                     <div class="profile-avatar">
@@ -166,16 +159,6 @@
                 <div class="stat-value">{{ pending_approvals or 0 }}</div>
                 <div class="stat-label">Pending Approvals</div>
             </a>
-
-            <a href="#" class="stat-card">
-                <div class="stat-header">
-                    <div class="stat-icon cyan">
-                        <i class="fas fa-server"></i>
-                    </div>
-                </div>
-                <div class="stat-value">✓</div>
-                <div class="stat-label">System Status</div>
-            </a>
         </div>
 
         <!-- Quick Actions -->
@@ -229,48 +212,21 @@
                     <a href="#" style="color: var(--primary); text-decoration: none; font-size: 0.9rem;">View All</a>
                 </div>
                 <div class="card-body">
-                    <ul class="activity-list">
-                        <li class="activity-item">
-                            <div class="activity-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
-                                <i class="fas fa-hotel"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p>New hotel <strong>Grand Palace</strong> was registered</p>
-                                <span>2 hours ago</span>
-                            </div>
-                        </li>
+                    <ul class="activity-list" id="activityList">
                         <li class="activity-item">
                             <div class="activity-icon" style="background: rgba(79, 70, 229, 0.1); color: var(--primary);">
-                                <i class="fas fa-user-plus"></i>
+                                <i class="fas fa-spinner fa-spin"></i>
                             </div>
                             <div class="activity-content">
-                                <p>Manager <strong>Rahul Sharma</strong> added to Grand Palace</p>
-                                <span>3 hours ago</span>
-                            </div>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">
-                                <i class="fas fa-id-card"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p>KYC verification completed for <strong>Royal Garden</strong></p>
-                                <span>5 hours ago</span>
-                            </div>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon" style="background: rgba(6, 182, 212, 0.1); color: var(--secondary);">
-                                <i class="fas fa-cog"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p>System settings updated successfully</p>
-                                <span>Yesterday</span>
+                                <p>Loading activities...</p>
+                                <span>Please wait</span>
                             </div>
                         </li>
                     </ul>
                 </div>
             </div>
 
-            <div class="card">
+            <!-- <div class="card">
                 <div class="card-header">
                     <h3>System Status</h3>
                 </div>
@@ -313,7 +269,7 @@
                         </li>
                     </ul>
                 </div>
-            </div>
+            </div> -->
         </div>
     </main>
 
@@ -327,6 +283,73 @@
                 document.getElementById('dropdownMenu').classList.remove('show');
             }
         }
+
+        // Activity icon mapping
+        const activityIcons = {
+            'hotel_created': { icon: 'fa-hotel', color: 'rgba(16, 185, 129, 0.1)', iconColor: 'var(--success)' },
+            'manager_added': { icon: 'fa-user-plus', color: 'rgba(79, 70, 229, 0.1)', iconColor: 'var(--primary)' },
+            'kyc_verified': { icon: 'fa-id-card', color: 'rgba(245, 158, 11, 0.1)', iconColor: 'var(--warning)' },
+            'system_update': { icon: 'fa-cog', color: 'rgba(6, 182, 212, 0.1)', iconColor: 'var(--secondary)' }
+        };
+
+        // Time formatting
+        function timeAgo(dateString) {
+            const now = new Date();
+            const past = new Date(dateString);
+            const seconds = Math.floor((now - past) / 1000);
+
+            if (seconds < 60) return 'Just now';
+            if (seconds < 3600) return Math.floor(seconds / 60) + ' minutes ago';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + ' hours ago';
+            if (seconds < 172800) return 'Yesterday';
+            return Math.floor(seconds / 86400) + ' days ago';
+        }
+
+        // Fetch and update activities
+        function fetchActivities() {
+            fetch('{{ url_for("admin.get_recent_activities") }}')
+                .then(response => response.json())
+                .then(data => {
+                    const activityList = document.getElementById('activityList');
+                    
+                    if (data.length === 0) {
+                        activityList.innerHTML = `
+                            <li class="activity-item">
+                                <div class="activity-icon" style="background: rgba(156, 163, 175, 0.1); color: var(--gray);">
+                                    <i class="fas fa-info-circle"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <p>No recent activities</p>
+                                    <span>Start by creating a hotel or adding a manager</span>
+                                </div>
+                            </li>
+                        `;
+                        return;
+                    }
+
+                    activityList.innerHTML = data.map(activity => {
+                        const iconData = activityIcons[activity.activity_type] || activityIcons['system_update'];
+                        return `
+                            <li class="activity-item">
+                                <div class="activity-icon" style="background: ${iconData.color}; color: ${iconData.iconColor};">
+                                    <i class="fas ${iconData.icon}"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <p>${activity.message}</p>
+                                    <span>${timeAgo(activity.created_at)}</span>
+                                </div>
+                            </li>
+                        `;
+                    }).join('');
+                })
+                .catch(error => console.error('Error fetching activities:', error));
+        }
+
+        // Initial load
+        fetchActivities();
+
+        // Poll every 10 seconds
+        setInterval(fetchActivities, 10000);
     </script>
 </body>
 </html>

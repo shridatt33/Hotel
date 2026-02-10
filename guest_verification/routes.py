@@ -5,6 +5,7 @@ import qrcode
 import io
 import base64
 from urllib.parse import urljoin
+from database.db import get_db_connection
 
 def check_kyc_module():
     """Check if KYC module is enabled for this manager's hotel"""
@@ -75,6 +76,20 @@ def submit_verification(manager_id):
         )
         
         if result['success']:
+            # Log activity
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO recent_activities (activity_type, message) VALUES (%s, %s)",
+                    ('verification', f"Verification completed for '{guest_name}'")
+                )
+                conn.commit()
+                cursor.close()
+                conn.close()
+            except Exception:
+                pass
+            
             return render_template('verification_success.html')
         else:
             return render_template('guest_verification_form.html', 
