@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin="anonymous" referrerpolicy="no-referrer">
-    <link rel="stylesheet" href="{{ url_for('static', filename='manager.css') }}?v={{ range(1000, 9999) | random }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='manager_dashboard.css') }}?v={{ range(1000, 9999) | random }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='menu_dashboard.css') }}?v={{ range(1000, 9999) | random }}">
     <style>
         /* Daily Special Menu Styles */
@@ -726,19 +726,9 @@
     <!-- Header -->
     <header class="header">
         <div class="header-left">
-            <button class="mobile-menu-toggle" onclick="toggleSidebar()">
-                <i class="fas fa-bars"></i>
-            </button>
             <h1>Manager Dashboard</h1>
         </div>
         <div class="header-right">
-            <div class="header-icon">
-                <i class="fas fa-bell"></i>
-                <span class="badge">3</span>
-            </div>
-            <div class="header-icon">
-                <i class="fas fa-envelope"></i>
-            </div>
             <div class="profile-dropdown">
                 <div class="profile-btn" onclick="toggleDropdown()">
                     <div class="profile-avatar">
@@ -788,7 +778,7 @@
 
             <!-- Stats Cards -->
             <div class="stats-grid">
-                <div class="stat-card clickable" onclick="showSection('verification')" title="View Verification Dashboard">
+                <a href="#" onclick="showSection('verification'); return false;" class="stat-card">
                     <div class="stat-header">
                         <div class="stat-icon green">
                             <i class="fas fa-clipboard-check"></i>
@@ -796,10 +786,9 @@
                     </div>
                     <div class="stat-value">{{ stats.verifications.today if stats else 0 }}</div>
                     <div class="stat-label">Today's Verifications</div>
-                    <div class="stat-subtitle">Total: {{ stats.verifications.total if stats else 0 }}</div>
-                </div>
+                </a>
 
-                <div class="stat-card clickable" onclick="showSection('table-orders'); setTimeout(() => showTableSubSection('view-orders'), 100);" title="View Orders Dashboard">
+                <a href="#" onclick="showSection('table-orders'); setTimeout(() => showTableSubSection('view-orders'), 100); return false;" class="stat-card">
                     <div class="stat-header">
                         <div class="stat-icon purple">
                             <i class="fas fa-receipt"></i>
@@ -807,10 +796,9 @@
                     </div>
                     <div class="stat-value">{{ stats.orders.today if stats else 0 }}</div>
                     <div class="stat-label">Today's Orders</div>
-                    <div class="stat-subtitle">Active: {{ stats.orders.active if stats else 0 }}</div>
-                </div>
+                </a>
 
-                <div class="stat-card clickable" onclick="showSection('waiters')" title="View Waiters Dashboard">
+                <a href="#" onclick="showSection('waiters'); return false;" class="stat-card">
                     <div class="stat-header">
                         <div class="stat-icon blue">
                             <i class="fas fa-user-tie"></i>
@@ -818,10 +806,9 @@
                     </div>
                     <div class="stat-value">{{ waiters_count if waiters_count else 0 }}</div>
                     <div class="stat-label">Active Waiters</div>
-                    <div class="stat-subtitle">On duty today</div>
-                </div>
+                </a>
 
-                <div class="stat-card clickable" onclick="showSection('full-menu')" title="View Menu Dashboard">
+                <a href="#" onclick="showSection('full-menu'); return false;" class="stat-card">
                     <div class="stat-header">
                         <div class="stat-icon orange">
                             <i class="fas fa-hamburger"></i>
@@ -829,10 +816,9 @@
                     </div>
                     <div class="stat-value">{{ stats.menu.total_items if stats else 0 }}</div>
                     <div class="stat-label">Menu Items</div>
-                    <div class="stat-subtitle">{{ stats.menu.categories if stats else 0 }} categories</div>
-                </div>
+                </a>
 
-                <div class="stat-card clickable" onclick="showSection('reports')" title="View Revenue Reports">
+                <a href="#" onclick="showSection('reports'); return false;" class="stat-card">
                     <div class="stat-header">
                         <div class="stat-icon pink">
                             <i class="fas fa-indian-rupee-sign"></i>
@@ -840,23 +826,17 @@
                     </div>
                     <div class="stat-value">₹{{ "%.2f"|format(stats.revenue.today) if stats else '0.00' }}</div>
                     <div class="stat-label">Today's Revenue</div>
-                    <div class="stat-subtitle">Pending: ₹{{ "%.2f"|format(stats.revenue.pending) if stats else '0.00' }}</div>
-                </div>
+                </a>
 
-                <div class="stat-card clickable" onclick="showSection('table-orders'); setTimeout(() => showTableSubSection('manage-tables'), 100);" title="View Tables Dashboard">
+                <a href="#" onclick="showSection('table-orders'); setTimeout(() => showTableSubSection('manage-tables'), 100); return false;" class="stat-card">
                     <div class="stat-header">
                         <div class="stat-icon cyan">
                             <i class="fas fa-chair"></i>
                         </div>
                     </div>
-                    <div class="stat-value">
-                        <span class="table-busy">{{ stats.tables.busy if stats else 0 }}</span>
-                        <span class="table-divider">/</span>
-                        <span class="table-available">{{ stats.tables.available if stats else 0 }}</span>
-                    </div>
-                    <div class="stat-label">Active Tables</div>
-                    <div class="stat-subtitle">Busy / Available (Total: {{ stats.tables.total if stats else 0 }})</div>
-                </div>
+                    <div class="stat-value">{{ stats.tables.total if stats else 0 }}</div>
+                    <div class="stat-label">Total Tables</div>
+                </a>
             </div>
 
             <!-- Recent Activity -->
